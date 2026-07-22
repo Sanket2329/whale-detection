@@ -1,0 +1,1 @@
+Selection	View	Channel	Begin File	End File	Begin Time (s)	End Time (s)	Beg File Samp (samples)	End File Samp (samples)	Confidence

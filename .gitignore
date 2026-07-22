@@ -1,0 +1,25 @@
+# Ignore data files (extremely large)
+data/
+
+# Ignore local environment file (contains local paths)
+.env
+
+# Ignore python caches and temp files
+__pycache__/
+*/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+
+# Ignore macOS metadata
+.AppleDouble
+.LSOverride
+Icon
+
+
+# Ignore local vscode settings that might be user-specific (keep launch.json if wanted, but ignore settings/workspace files)
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
