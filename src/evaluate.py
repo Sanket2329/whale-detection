@@ -67,14 +67,17 @@ def calculate_iou(g_start, g_end, p_start, p_end):
         return 0.0
     return intersection / union
 
-def evaluate_class_events(gt_events_by_wav, pred_events_by_wav, iou_thresh=0.1):
+def evaluate_class_events(gt_events_by_wav, pred_events_by_wav, iou_thresh=0.1, eval_only_predicted=False):
     """Matches predictions to ground truth via greedy IoU and calculates metrics."""
     total_tp = 0
     total_fp = 0
     total_fn = 0
     
-    # Loop over all WAV files present in either ground truth or predictions
-    all_wavs = set(gt_events_by_wav.keys()) | set(pred_events_by_wav.keys())
+    # Loop over target WAV files
+    if eval_only_predicted:
+        all_wavs = set(pred_events_by_wav.keys())
+    else:
+        all_wavs = set(gt_events_by_wav.keys()) | set(pred_events_by_wav.keys())
     
     for wav_file in all_wavs:
         gts = gt_events_by_wav.get(wav_file, [])
@@ -128,6 +131,7 @@ def main():
     parser.add_argument("--gt_name", type=str, required=True, help="Dataset name for ground truth (casey2014 or Greenwich64S2015)")
     parser.add_argument("--pred_dir", type=str, required=True, help="Directory containing predicted selections")
     parser.add_argument("--iou_thresh", type=float, default=0.1, help="IoU threshold for event matching")
+    parser.add_argument("--eval_only_predicted", action="store_true", help="Only evaluate files that have predictions")
     
     args = parser.parse_args()
     
@@ -136,7 +140,7 @@ def main():
     gt_all = parse_selection_files(args.gt_dir, args.gt_name)
     
     print("\n================ Evaluation Results ================")
-    print(f"Dataset: {args.gt_name} | IoU Threshold: {args.iou_thresh}")
+    print(f"Dataset: {args.gt_name} | IoU Threshold: {args.iou_thresh} | Eval Only Predicted: {args.eval_only_predicted}")
     print("-" * 75)
     print(f"{'Class Name':20s} | {'GT':5s} | {'Pred':5s} | {'TP':5s} | {'FP':5s} | {'FN':5s} | {'Precision':9s} | {'Recall':8s} | {'F1-Score':8s}")
     print("-" * 75)
@@ -156,7 +160,7 @@ def main():
         gt_count = sum(len(anns) for anns in gt_cls.values())
         pred_count = sum(len(anns) for anns in pred_cls.values())
         
-        tp, fp, fn, prec, rec, f1 = evaluate_class_events(gt_cls, pred_cls, iou_thresh=args.iou_thresh)
+        tp, fp, fn, prec, rec, f1 = evaluate_class_events(gt_cls, pred_cls, iou_thresh=args.iou_thresh, eval_only_predicted=args.eval_only_predicted)
         
         print(f"{cls_name:20s} | {gt_count:5d} | {pred_count:5d} | {tp:5d} | {fp:5d} | {fn:5d} | {prec:9.4f} | {rec:8.4f} | {f1:8.4f}")
         

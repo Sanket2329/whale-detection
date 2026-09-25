@@ -254,11 +254,12 @@ def build_dataset_clips(dataset_dir, dataset_name, annotations_by_wav, clip_dura
 
 class WhaleDataset(Dataset):
     """PyTorch Dataset to load audio clips and generate spectrograms and label grids on the fly."""
-    def __init__(self, clip_definitions, target_sr=250, clip_duration=30.0, augment=False):
+    def __init__(self, clip_definitions, target_sr=250, clip_duration=30.0, augment=False, spec_augment=False):
         self.clips = clip_definitions
         self.target_sr = target_sr
         self.clip_duration = clip_duration
         self.augment = augment
+        self.spec_augment = spec_augment
         self.target_samples = int(clip_duration * target_sr)
         
         # Spectrogram parameters
@@ -295,6 +296,26 @@ class WhaleDataset(Dataset):
             y = y + np.random.normal(0, noise_std, len(y))
             
         return y
+
+    def apply_spec_augment(self, spec, max_f=8, max_t=8, num_f_masks=2, num_t_masks=2):
+        """Applies frequency and time masking (SpecAugment) to the normalized spectrogram."""
+        f_bins, t_frames = spec.shape
+        
+        # Frequency masking
+        for _ in range(num_f_masks):
+            f = np.random.randint(0, max_f + 1)
+            if f_bins - f > 0:
+                f0 = np.random.randint(0, f_bins - f)
+                spec[f0:f0+f, :] = 0.0
+            
+        # Time masking
+        for _ in range(num_t_masks):
+            t = np.random.randint(0, max_t + 1)
+            if t_frames - t > 0:
+                t0 = np.random.randint(0, t_frames - t)
+                spec[:, t0:t0+t] = 0.0
+            
+        return spec
 
     def __getitem__(self, idx):
         c_def = self.clips[idx]
@@ -353,6 +374,9 @@ class WhaleDataset(Dataset):
         # Normalize spectrogram values to roughly [0, 1]
         spec = (spec + 80.0) / 80.0
         spec = np.clip(spec, 0.0, 1.0)
+        
+        if self.augment and self.spec_augment:
+            spec = self.apply_spec_augment(spec, max_f=8, max_t=8, num_f_masks=2, num_t_masks=2)
         
         # Convert to PyTorch tensor with shape (1, freq, time)
         spec_tensor = torch.tensor(spec, dtype=torch.float32).unsqueeze(0)

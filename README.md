@@ -10,9 +10,13 @@ An automated, GPU-accelerated **Sound Event Detection (SED)** pipeline designed 
 ---
 
 ## 🌟 Key Features
+*   **Streamlit Web Application**: An interactive, premium frontend UI for visualization, dynamic threshold tuning, and audio playback (`app.py`).
 *   **Rational Resampling**: Handles sample rate discrepancies dynamically using high-performance C-based `soxr` resampling.
 *   **Noise Minimization**: Integrates a 4th-order 10 Hz Butterworth high-pass filter to block hydrostatic pressure waves.
 *   **CNN-RNN (CRNN) Architecture**: Combines a 5-layer 2D CNN (frequency-only pooling) with a Bidirectional GRU to model temporal sequence dependencies.
+*   **Unsupervised Domain Adaptation (DANN)**: Employs a Gradient Reversal Layer (GRL) to align feature distributions between a source dataset and a target dataset to improve cross-site generalization.
+*   **Advanced Training Techniques**: Supports Multi-Label Focal Loss for extreme class imbalance, Mixup Augmentation, and SpecAugment (time and frequency masking).
+*   **Dynamic Threshold Optimization**: Sweeps a range of thresholds dynamically during validation to optimize class-specific thresholds for maximum F1-Score.
 *   **Overlapping Detection Support**: Frame-level multi-label Sigmoid outputs allow classification of concurrent calls.
 *   **Imbalance Resolution**: Vectorized silence gap-finding algorithms perform balanced negative training clip mining.
 *   **Apple Silicon Acceleration**: Out-of-the-box support for Metal Performance Shaders (MPS) on Apple M-series chips.
@@ -29,6 +33,7 @@ graph TD
     D --> E[5-Layer 2D CNN Frontend]
     E --> F[2-Layer Bidirectional GRU]
     F --> G[Frame Classifier: Multi-Label Sigmoids]
+    E -.-> |GRL| Z[Domain Classifier]
     G --> H[Sliding Window Aggregator]
     H --> I[1D Median Filter Smoothing]
     I --> J[Event Boundary Selection Tables]
@@ -44,17 +49,19 @@ whale-detection/
 ├── data/                  # Hydrophone recordings & Raven annotation files
 │   ├── casey2014/         # Train Site: Casey (2014) recordings
 │   └── Greenwich64S2015/  # Test Site: Greenwich (2015) recordings
-├── models/                # Saved model checkpoint files (*.pth)
+├── models/                # Saved model checkpoint files (*.pth) and thresholds JSON
 ├── reports/               # Output predictions & assessment documents
 │   ├── predictions/       # Extracted Raven-compatible selection files
 │   └── technical_report.md# Formal engineering assessment report
 ├── src/                   # Python package modules
 │   ├── __init__.py
 │   ├── dataset.py         # Signal preprocessing, filtering, & balanced loader
-│   ├── model.py           # Deep learning CRNN network definition
-│   ├── train.py           # Accelerated GPU training controller
+│   ├── model.py           # Deep learning CRNN network & Domain Classifier definition
+│   ├── train.py           # Accelerated GPU training controller (DANN, dynamic thresholds)
 │   ├── infer.py           # Overlapping sliding window boundary extractor
-│   └── evaluate.py        # Greedy IoU interval matcher
+│   ├── evaluate.py        # Greedy IoU interval matcher
+│   └── losses.py          # Custom loss functions like Focal Loss
+├── app.py                 # Interactive Streamlit Web Application
 ├── README.md              # Project documentation
 ├── approach.md            # Detailed methodology & design document
 └── run_pipeline.sh        # Master Bash pipeline runner
@@ -68,7 +75,7 @@ whale-detection/
 Ensure Python 3.11+ is installed. Clone the repository and install the standard scientific audio packages:
 
 ```bash
-pip install numpy pandas scipy scikit-learn matplotlib librosa soundfile torch torchaudio pypdf
+pip install numpy pandas scipy scikit-learn matplotlib librosa soundfile torch torchaudio pypdf streamlit
 ```
 
 ### 2. GPU Acceleration (macOS M-Series)
@@ -83,24 +90,31 @@ export PYTHONPATH=.
 
 ## ⚙️ Quick Start
 
-### 1. Run the Entire Pipeline
+### 1. Run the Streamlit Web App
+To launch the interactive dashboard for running inferences, adjusting thresholds, and visualizing bounding boxes:
+
+```bash
+streamlit run app.py
+```
+
+### 2. Run the Entire Pipeline
 To train, run inference, and generate the final F1 evaluation table end-to-end, execute the master script:
 
 ```bash
 ./run_pipeline.sh
 ```
 
-### 2. Manual Testing (Step-by-Step)
+### 3. Manual Testing (Step-by-Step)
 You can run individual pipeline steps using Python's `-m` module switch:
 
 *   **Step A: Train Model**
     ```bash
-    python3 -m src.train --train_dir data/casey2014 --train_name casey2014 --val_dir data/Greenwich64S2015 --val_name Greenwich64S2015 --epochs 5 --subsample_train 0.05 --subsample_val 0.1 --save_path models/best_model.pth
+    python3 -m src.train --train_dir data/casey2014 --train_name casey2014 --val_dir data/Greenwich64S2015 --val_name Greenwich64S2015 --epochs 5 --subsample_train 0.05 --subsample_val 0.1 --save_path models/best_model.pth --loss_type focal --mixup_alpha 0.2 --spec_augment --dann
     ```
 
 *   **Step B: Run Inference (Detection) on a WAV file**
     ```bash
-    python3 -m src.infer --model_path models/best_model.pth --wav_path data/Greenwich64S2015/wav/20150102-140944.wav --output_dir reports/predictions/manual_test --threshold 0.05
+    python3 -m src.infer --model_path models/best_model.pth --wav_path data/Greenwich64S2015/wav/20150102-140944.wav --output_dir reports/predictions/manual_test
     ```
 
 *   **Step C: Evaluate Metrics against Ground-Truth**

@@ -16,13 +16,16 @@ python3 -u src/train.py \
     --train_name casey2014 \
     --val_dir data/Greenwich64S2015 \
     --val_name Greenwich64S2015 \
-    --epochs 5 \
+    --epochs 10 \
     --batch_size 128 \
     --lr 0.001 \
     --save_path models/best_model.pth \
-    --subsample_train 0.05 \
-    --subsample_val 0.1 \
-    --neg_multiplier 1.0
+    --subsample_train 0.1 \
+    --subsample_val 0.2 \
+    --neg_multiplier 1.0 \
+    --loss_type focal \
+    --mixup_alpha 0.2 \
+    --spec_augment
 
 echo ""
 echo "Step 2: Running Sliding Window Inference on Greenwich (2015)"
