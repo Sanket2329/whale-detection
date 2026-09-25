@@ -56,11 +56,13 @@ whale-detection/
 ├── src/                   # Python package modules
 │   ├── __init__.py
 │   ├── dataset.py         # Signal preprocessing, filtering, & balanced loader
-│   ├── model.py           # Deep learning CRNN network & Domain Classifier definition
+│   ├── model.py           # Deep learning CRNN network & Domain Classifier (DANN/GRL)
 │   ├── train.py           # Accelerated GPU training controller (DANN, dynamic thresholds)
 │   ├── infer.py           # Overlapping sliding window boundary extractor
 │   ├── evaluate.py        # Greedy IoU interval matcher
-│   └── losses.py          # Custom loss functions like Focal Loss
+│   ├── losses.py          # Custom loss functions like Focal Loss
+│   ├── export_onnx.py     # Script to export PyTorch model to ONNX
+│   └── benchmark_onnx.py  # Evidence script for fourfold ONNX speedup claim
 ├── app.py                 # Interactive Streamlit Web Application
 ├── README.md              # Project documentation
 ├── approach.md            # Detailed methodology & design document
@@ -75,7 +77,7 @@ whale-detection/
 Ensure Python 3.11+ is installed. Clone the repository and install the standard scientific audio packages:
 
 ```bash
-pip install numpy pandas scipy scikit-learn matplotlib librosa soundfile torch torchaudio pypdf streamlit
+pip install numpy pandas scipy scikit-learn matplotlib librosa soundfile torch torchaudio pypdf streamlit onnxruntime
 ```
 
 ### 2. GPU Acceleration (macOS M-Series)
@@ -120,6 +122,12 @@ You can run individual pipeline steps using Python's `-m` module switch:
 *   **Step C: Evaluate Metrics against Ground-Truth**
     ```bash
     python3 -m src.evaluate --gt_dir data/Greenwich64S2015 --gt_name Greenwich64S2015 --pred_dir reports/predictions/manual_test --iou_thresh 0.1
+    ```
+
+*   **Step D: Export & Benchmark ONNX (Evidence of Speedup)**
+    ```bash
+    python3 -m src.export_onnx
+    python3 -m src.benchmark_onnx
     ```
 
 ---

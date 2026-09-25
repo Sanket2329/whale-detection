@@ -46,6 +46,12 @@ python3 -u src/evaluate.py \
     --iou_thresh 0.1
 
 echo ""
+echo "Step 4: Exporting to ONNX and Benchmarking Inference Speed"
+echo "----------------------------------------------------------"
+python3 -m src.export_onnx
+python3 -m src.benchmark_onnx
+
+echo ""
 echo "=========================================================="
 echo "               Pipeline Execution Finished                "
 echo "=========================================================="
