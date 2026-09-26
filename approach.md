@@ -73,7 +73,7 @@ To handle the cross-site domain shift (e.g., Casey to Greenwich), we implement a
 ## 6. Inference Acceleration & ONNX Export
 For real-time deployment and scaling to multi-year archives, pure PyTorch inference is too slow.
 - The model graph is exported to **ONNX (Open Neural Network Exchange)**.
-- Benchmarks demonstrate an approximate **fourfold (4x) speedup** during inference using ONNX Runtime compared to native PyTorch, providing massive cost savings for large-scale acoustic analysis.
+- Benchmarks demonstrate an approximate **threefold (3.17x) speedup** during inference using ONNX Runtime compared to native PyTorch, providing massive cost savings for large-scale acoustic analysis.
 
 ---
 

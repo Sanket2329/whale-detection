@@ -149,7 +149,7 @@ Detections are evaluated at the event-level using **Intersection-over-Union (IoU
 
 > [!NOTE]
 > The above scores represent full cross-site generalization with the DANN Domain Classifier enabled. 
-> The ~fourfold (4x) inference speedup claim is directly cited from the output of the `src/benchmark_onnx.py` script, which verifies ONNX execution time against the native PyTorch graph.
+> The ~threefold (3.17x) inference speedup claim is directly cited from the output of the `src/benchmark_onnx.py` script, which verifies ONNX execution time against the native PyTorch graph.
 
 ---
 

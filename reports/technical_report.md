@@ -63,7 +63,7 @@ Whale calls occupy less than 10% of the recordings. To build a robust model with
 *   **Optimization**: AdamW optimizer with a learning rate of 1e-3, Cosine Annealing scheduler, and Cosine decay over 5 epochs.
 
 ### 3.2 Inference Acceleration (ONNX)
-To scale inference across thousands of hours of audio, the PyTorch model is compiled into an **ONNX** graph. Internal benchmarks verify that the ONNX Runtime achieves an approximate **fourfold (4x) speedup** over native PyTorch inference.
+To scale inference across thousands of hours of audio, the PyTorch model is compiled into an **ONNX** graph. Internal benchmarks verify that the ONNX Runtime achieves an approximate **threefold (3.17x) speedup** over native PyTorch inference.
 
 ### 3.2 Evaluation Metrics
 Event matching uses an **Intersection-over-Union (IoU) threshold of 0.1** on temporal boundaries. Precision, Recall, and F1-score are reported for each category.
