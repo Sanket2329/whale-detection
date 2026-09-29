@@ -136,16 +136,16 @@ You can run individual pipeline steps using Python's `-m` module switch:
 
 Detections are evaluated at the event-level using **Intersection-over-Union (IoU) >= 0.1** on the unseen **Greenwich (2015)** dataset (model trained on **Casey 2014** for 50 epochs with DANN enabled):
 
-| Class Name | Ground Truth | Predictions | True Positives | Precision | Recall | F1-Score |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`Bm.Ant-A`** | 827 | 966 | 427 | 0.4420 | 0.5163 | **0.4763** |
-| **`Bm.Ant-B`** | 157 | 401 | 23 | 0.0574 | 0.1465 | **0.0824** |
-| **`Bm.Ant-Z`** | 29 | 204 | 2 | 0.0098 | 0.0690 | **0.0172** |
-| **`Bm.D`** | 66 | 70 | 0 | 0.0000 | 0.0000 | **0.0000** |
-| **`Bp.20Hz`** | 2 | 0 | 0 | 0.0000 | 0.0000 | **0.0000** |
-| **`Bp.20Plus`** | 1 | 0 | 0 | 0.0000 | 0.0000 | **0.0000** |
-| **`Bp.Downsweep`** | 46 | 0 | 0 | 0.0000 | 0.0000 | **0.0000** |
-| **`Unidentified`** | 325 | 1763 | 64 | 0.0363 | 0.1969 | **0.0613** |
+| Class Name | Ground Truth | Predictions | True Positives | False Positives | False Negatives | Precision | Recall | F1-Score |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`Bm.Ant-A`** | 827 | 966 | 427 | 539 | 400 | 0.4420 | 0.5163 | **0.4763** |
+| **`Bm.Ant-B`** | 157 | 401 | 23 | 378 | 134 | 0.0574 | 0.1465 | **0.0824** |
+| **`Bm.Ant-Z`** | 29 | 204 | 2 | 202 | 27 | 0.0098 | 0.0690 | **0.0172** |
+| **`Bm.D`** | 66 | 70 | 0 | 70 | 66 | 0.0000 | 0.0000 | **0.0000** |
+| **`Bp.20Hz`** | 2 | 0 | 0 | 0 | 2 | 0.0000 | 0.0000 | **0.0000** |
+| **`Bp.20Plus`** | 1 | 0 | 0 | 0 | 1 | 0.0000 | 0.0000 | **0.0000** |
+| **`Bp.Downsweep`** | 46 | 0 | 0 | 0 | 46 | 0.0000 | 0.0000 | **0.0000** |
+| **`Unidentified`** | 325 | 1763 | 64 | 1699 | 261 | 0.0363 | 0.1969 | **0.0613** |
 
 > [!NOTE]
 > The above scores represent full cross-site generalization with the DANN Domain Classifier enabled. 
