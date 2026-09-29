@@ -1,0 +1,14 @@
+Using device: mps
+Pipeline config: Loss=focal | Mixup=0.2 | SpecAugment=True
+Domain Adaptation: DANN=True | GRL Alpha=1.0
+Loading training data from: data/casey2014
+Loading validation data from: data/Greenwich64S2015
+Subsampled training clips to: 4998
+Total training clips: 4998
+Total validation clips: 2922
+Loading target domain training data from: data/Greenwich64S2015
+
+Starting training loop...
+Epoch 01/15 | Train Loss: 0.7240 (Species: 0.0139, Domain: 0.7102) | Val Loss: 0.0081 | Val F1 (Macro 0.5): 0.0000 | Val F1 (Macro Opt): 0.0569 | Val AUC (Macro): 0.5269 | Time: 74.2s
+  Active Class F1s: Bm.Ant-A (Th=0.20): 0.281, Bm.Ant-B (Th=0.05): 0.037, Bm.Ant-Z (Th=0.15): 0.027, Bm.D (Th=0.05): 0.009, Bp.Downsweep (Th=0.05): 0.001, Unidentified (Th=0.05): 0.099
+  --> Saved new best checkpoint to models/best_model_fast.pth and thresholds to models/best_model_fast_thresholds.json (Opt F1: 0.0569)

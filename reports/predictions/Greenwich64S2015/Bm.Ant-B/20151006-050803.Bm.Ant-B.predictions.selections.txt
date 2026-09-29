@@ -1,1 +1,3 @@
 Selection	View	Channel	Begin File	End File	Begin Time (s)	End Time (s)	Beg File Samp (samples)	End File Samp (samples)	Confidence
+1	Spectrogram 1	1	20151006-050803.wav	20151006-050803.wav	12.288	14.848	3108	3756	0.2792
+2	Spectrogram 1	1	20151006-050803.wav	20151006-050803.wav	584.960	588.544	147994	148901	0.2716

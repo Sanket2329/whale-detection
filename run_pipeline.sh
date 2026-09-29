@@ -16,7 +16,7 @@ python3 -u src/train.py \
     --train_name casey2014 \
     --val_dir data/Greenwich64S2015 \
     --val_name Greenwich64S2015 \
-    --epochs 10 \
+    --epochs 50 \
     --batch_size 128 \
     --lr 0.001 \
     --save_path models/best_model.pth \

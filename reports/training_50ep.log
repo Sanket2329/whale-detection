@@ -1,0 +1,26 @@
+Using device: mps
+Pipeline config: Loss=focal | Mixup=0.2 | SpecAugment=True
+Domain Adaptation: DANN=True | GRL Alpha=1.0
+Loading training data from: data/casey2014
+Loading validation data from: data/Greenwich64S2015
+Total training clips: 24990
+Total validation clips: 2922
+Loading target domain training data from: data/Greenwich64S2015
+
+Starting training loop...
+Epoch 01/50 | Train Loss: 0.7073 (Species: 0.0083, Domain: 0.6989) | Val Loss: 0.0083 | Val F1 (Macro 0.5): 0.0000 | Val F1 (Macro Opt): 0.0659 | Val AUC (Macro): 0.5742 | Time: 375.4s
+  Active Class F1s: Bm.Ant-A (Th=0.15): 0.219, Bm.Ant-B (Th=0.15): 0.142, Bm.Ant-Z (Th=0.20): 0.054, Bm.D (Th=0.05): 0.009, Unidentified (Th=0.15): 0.102
+  --> Saved new best checkpoint to models/best_model_50ep.pth and thresholds to models/best_model_50ep_thresholds.json (Opt F1: 0.0659)
+Epoch 02/50 | Train Loss: 0.7018 (Species: 0.0073, Domain: 0.6945) | Val Loss: 0.0081 | Val F1 (Macro 0.5): 0.0000 | Val F1 (Macro Opt): 0.0607 | Val AUC (Macro): 0.5710 | Time: 9554.8s
+  Active Class F1s: Bm.Ant-A (Th=0.15): 0.246, Bm.Ant-B (Th=0.15): 0.095, Bm.Ant-Z (Th=0.20): 0.036, Bm.D (Th=0.05): 0.009, Unidentified (Th=0.05): 0.099
+Epoch 03/50 | Train Loss: 0.7015 (Species: 0.0073, Domain: 0.6942) | Val Loss: 0.0083 | Val F1 (Macro 0.5): 0.0000 | Val F1 (Macro Opt): 0.0641 | Val AUC (Macro): 0.5870 | Time: 10553.6s
+  Active Class F1s: Bm.Ant-A (Th=0.15): 0.273, Bm.Ant-B (Th=0.10): 0.084, Bm.Ant-Z (Th=0.20): 0.039, Bm.D (Th=0.05): 0.009, Unidentified (Th=0.15): 0.107
+Epoch 04/50 | Train Loss: 0.7014 (Species: 0.0072, Domain: 0.6942) | Val Loss: 0.0083 | Val F1 (Macro 0.5): 0.0000 | Val F1 (Macro Opt): 0.0790 | Val AUC (Macro): 0.5898 | Time: 402.8s
+  Active Class F1s: Bm.Ant-A (Th=0.20): 0.332, Bm.Ant-B (Th=0.15): 0.097, Bm.Ant-Z (Th=0.30): 0.035, Bm.D (Th=0.10): 0.043, Unidentified (Th=0.15): 0.124
+  --> Saved new best checkpoint to models/best_model_50ep.pth and thresholds to models/best_model_50ep_thresholds.json (Opt F1: 0.0790)
+Epoch 05/50 | Train Loss: 0.7011 (Species: 0.0072, Domain: 0.6939) | Val Loss: 0.0078 | Val F1 (Macro 0.5): 0.0000 | Val F1 (Macro Opt): 0.0840 | Val AUC (Macro): 0.5844 | Time: 458.0s
+  Active Class F1s: Bm.Ant-A (Th=0.20): 0.377, Bm.Ant-B (Th=0.15): 0.096, Bm.Ant-Z (Th=0.25): 0.054, Bm.D (Th=0.05): 0.013, Unidentified (Th=0.15): 0.131
+  --> Saved new best checkpoint to models/best_model_50ep.pth and thresholds to models/best_model_50ep_thresholds.json (Opt F1: 0.0840)
+Epoch 06/50 | Train Loss: 0.7011 (Species: 0.0072, Domain: 0.6939) | Val Loss: 0.0079 | Val F1 (Macro 0.5): 0.0000 | Val F1 (Macro Opt): 0.0845 | Val AUC (Macro): 0.5725 | Time: 470.5s
+  Active Class F1s: Bm.Ant-A (Th=0.20): 0.356, Bm.Ant-B (Th=0.20): 0.101, Bm.Ant-Z (Th=0.25): 0.051, Bm.D (Th=0.10): 0.026, Unidentified (Th=0.20): 0.142
+  --> Saved new best checkpoint to models/best_model_50ep.pth and thresholds to models/best_model_50ep_thresholds.json (Opt F1: 0.0845)
