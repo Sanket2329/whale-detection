@@ -63,24 +63,24 @@ Whale calls occupy less than 10% of the recordings. To build a robust model with
 *   **Optimization**: AdamW optimizer with a learning rate of 1e-3, Cosine Annealing scheduler, and Cosine decay over 5 epochs.
 
 ### 3.2 Inference Acceleration (ONNX)
-To scale inference across thousands of hours of audio, the PyTorch model is compiled into an **ONNX** graph. Internal benchmarks verify that the ONNX Runtime achieves an approximate **threefold (3.17x) speedup** over native PyTorch inference.
+To scale inference across thousands of hours of audio, the PyTorch model is compiled into an **ONNX** graph. Internal benchmarks verify that the ONNX Runtime achieves an approximate **2.44x speedup** over native PyTorch inference.
 
 ### 3.2 Evaluation Metrics
 Event matching uses an **Intersection-over-Union (IoU) threshold of 0.1** on temporal boundaries. Precision, Recall, and F1-score are reported for each category.
 
 ### 3.3 Quantitative Results
-The baseline training run completed successfully on the Apple M4 GPU (MPS) in 1.2 minutes. The final F1 scores on the unseen Greenwich dataset were 0.0000 across classes. The raw probability statistics outputted by the model on the Greenwich recordings are:
+The training run completed successfully on the Apple M4 GPU (MPS) in about 20 minutes (50 epochs). The macro average F1-score on the unseen Greenwich dataset was 0.0797. The raw evaluation metrics outputted by the model on the Greenwich recordings are:
 
-| Class Name | Min Probability | Max Probability | Mean Probability |
-|---|---|---|---|
-| **Bm.Ant-A** | 0.0000 | 0.1027 | 0.0499 |
-| **Bm.Ant-B** | 0.0000 | 0.0828 | 0.0247 |
-| **Bm.Ant-Z** | 0.0000 | 0.0865 | 0.0358 |
-| **Bm.D** | 0.0000 | 0.0839 | 0.0340 |
-| **Bp.20Hz** | 0.0000 | 0.0840 | 0.0322 |
-| **Bp.20Plus** | 0.0000 | 0.0656 | 0.0237 |
-| **Bp.Downsweep** | 0.0000 | 0.0672 | 0.0283 |
-| **Unidentified** | 0.0000 | 0.1128 | 0.0423 |
+| Class Name | GT | Pred | TP | FP | FN | Precision | Recall | F1-Score |
+|---|---|---|---|---|---|---|---|---|
+| **`Bm.Ant-A`** | 827 | 966 | 427 | 539 | 400 | 0.4420 | 0.5163 | 0.4763 |
+| **`Bm.Ant-B`** | 157 | 401 | 23 | 378 | 134 | 0.0574 | 0.1465 | 0.0824 |
+| **`Bm.Ant-Z`** | 29 | 204 | 2 | 202 | 27 | 0.0098 | 0.0690 | 0.0172 |
+| **`Bm.D`** | 66 | 70 | 0 | 70 | 66 | 0.0000 | 0.0000 | 0.0000 |
+| **`Bp.20Hz`** | 2 | 0 | 0 | 0 | 2 | 0.0000 | 0.0000 | 0.0000 |
+| **`Bp.20Plus`** | 1 | 0 | 0 | 0 | 1 | 0.0000 | 0.0000 | 0.0000 |
+| **`Bp.Downsweep`** | 46 | 0 | 0 | 0 | 46 | 0.0000 | 0.0000 | 0.0000 |
+| **`Unidentified`** | 325 | 1763 | 64 | 1699 | 261 | 0.0363 | 0.1969 | 0.0613 |
 
 ---
 
