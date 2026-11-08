@@ -25,7 +25,8 @@ python3 -u src/train.py \
     --neg_multiplier 1.0 \
     --loss_type focal \
     --mixup_alpha 0.2 \
-    --spec_augment
+    --spec_augment \
+    --dann
 
 echo ""
 echo "Step 2: Running Sliding Window Inference on Greenwich (2015)"

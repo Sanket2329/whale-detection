@@ -14,7 +14,7 @@ An automated, GPU-accelerated **Sound Event Detection (SED)** pipeline designed 
 *   **Rational Resampling**: Handles sample rate discrepancies dynamically using high-performance C-based `soxr` resampling.
 *   **Noise Minimization**: Integrates a 4th-order 10 Hz Butterworth high-pass filter to block hydrostatic pressure waves.
 *   **CNN-RNN (CRNN) Architecture**: Combines a 5-layer 2D CNN (frequency-only pooling) with a Bidirectional GRU to model temporal sequence dependencies.
-*   **Unsupervised Domain Adaptation (DANN)**: Employs a Gradient Reversal Layer (GRL) to align feature distributions between a source dataset and a target dataset to improve cross-site generalization.
+*   **Unsupervised Domain Adaptation (DANN)**: Employs a Gradient Reversal Layer (GRL) to align feature distributions between a source dataset and an unlabelled target dataset under domain shift.
 *   **Advanced Training Techniques**: Supports Multi-Label Focal Loss for extreme class imbalance, Mixup Augmentation, and SpecAugment (time and frequency masking).
 *   **Dynamic Threshold Optimization**: Sweeps a range of thresholds dynamically during validation to optimize class-specific thresholds for maximum F1-Score.
 *   **Overlapping Detection Support**: Frame-level multi-label Sigmoid outputs allow classification of concurrent calls.
@@ -62,7 +62,7 @@ whale-detection/
 │   ├── evaluate.py        # Greedy IoU interval matcher
 │   ├── losses.py          # Custom loss functions like Focal Loss
 │   ├── export_onnx.py     # Script to export PyTorch model to ONNX
-│   └── benchmark_onnx.py  # Evidence script for fourfold ONNX speedup claim
+│   └── benchmark_onnx.py  # Latency comparison script for ONNX Runtime vs PyTorch
 ├── app.py                 # Interactive Streamlit Web Application
 ├── README.md              # Project documentation
 ├── approach.md            # Detailed methodology & design document
@@ -132,24 +132,30 @@ You can run individual pipeline steps using Python's `-m` module switch:
 
 ---
 
-## 📊 Evaluation Metrics (Cross-Site Generalization with DANN)
+## 📊 Evaluation Metrics (Controlled Cross-Domain Held-Out Evaluation)
 
-Detections are evaluated at the event-level using **Intersection-over-Union (IoU) >= 0.1** on the unseen **Greenwich (2015)** dataset (model trained on **Casey 2014** for 50 epochs with DANN enabled):
+Evaluation was conducted on **57 strictly held-out recordings** (387 reference ground-truth events) from the Greenwich (2015) deployment using bipartite Hungarian matching (IoU $\ge 0.1$):
 
-| Class Name | Ground Truth | Predictions | True Positives | False Positives | False Negatives | Precision | Recall | F1-Score |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`Bm.Ant-A`** | 827 | 966 | 427 | 539 | 400 | 0.4420 | 0.5163 | **0.4763** |
-| **`Bm.Ant-B`** | 157 | 401 | 23 | 378 | 134 | 0.0574 | 0.1465 | **0.0824** |
-| **`Bm.Ant-Z`** | 29 | 204 | 2 | 202 | 27 | 0.0098 | 0.0690 | **0.0172** |
-| **`Bm.D`** | 66 | 70 | 0 | 70 | 66 | 0.0000 | 0.0000 | **0.0000** |
-| **`Bp.20Hz`** | 2 | 0 | 0 | 0 | 2 | 0.0000 | 0.0000 | **0.0000** |
-| **`Bp.20Plus`** | 1 | 0 | 0 | 0 | 1 | 0.0000 | 0.0000 | **0.0000** |
-| **`Bp.Downsweep`** | 46 | 0 | 0 | 0 | 46 | 0.0000 | 0.0000 | **0.0000** |
-| **`Unidentified`** | 325 | 1763 | 64 | 1699 | 261 | 0.0363 | 0.1969 | **0.0613** |
+| Class Name | Target Val GT | Frozen Threshold (CRNN / DANN) | Calibration Status | Test GT | CRNN Baseline F1 | CRNN DANN F1 | Mean Paired Diff (DANN - CRNN) | Paired 95% Bootstrap CI |
+| :--- | :---: | :---: | :--- | :---: | :---: | :---: | :---: | :---: |
+| **`Bm.Ant-A`** | 191 | 0.05 / 0.15 | `calibrated_event_f1` | 246 | 0.0000 | **0.1109** | +0.1100 | [+0.0761, +0.1492] |
+| **`Bm.Ant-B`** | 28 | 0.05 / 0.05 | `calibrated_event_f1` | 44 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
+| **`Bm.Ant-Z`** | 6 | 0.15 / 0.05 | `calibrated_event_f1` | 9 | **0.0128** | 0.0000 | -0.0127 | [-0.0264, -0.0025] |
+| **`Bm.D`** | 4 | 0.50 / 0.50 | `uncalibrated_no_validation_detection` | 14 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
+| **`Bp.20Hz`** | 0 | 0.50 / 0.50 | `uncalibrated_no_positive_events` | 1 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
+| **`Bp.20Plus`** | 0 | 0.50 / 0.50 | `uncalibrated_no_positive_events` | 1 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
+| **`Bp.Downsweep`** | 14 | 0.05 / 0.05 | `calibrated_event_f1` | 13 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
+| **`Unidentified`** | 62 | 0.05 / 0.05 | `calibrated_event_f1` | 59 | 0.0517 | 0.0517 | +0.0000 | [+0.0000, +0.0000] |
+| **Macro-F1 (IoU $\ge$ 0.1)** | — | — | — | **387** | **0.0081** | **0.0203** | **+0.0122** | **[+0.0075, +0.0174]** |
+| **Micro-F1 (IoU $\ge$ 0.1)** | — | — | — | **387** | **0.0120** | **0.0969** | **+0.0841** | **[+0.0537, +0.1193]** |
+| **False Positives / Hour** | — | — | — | — | **97.86** | **163.41** | **+65.46** | **[+47.72, +85.17]** |
 
 > [!NOTE]
-> The above scores represent full cross-site generalization with the DANN Domain Classifier enabled. 
-> The 2.44x inference speedup claim is directly cited from the output of the `src/benchmark_onnx.py` script, which verifies ONNX execution time against the native PyTorch graph.
+> **Key Scientific Takeaways & Protocol Audit**:
+> * **Recording-Level Split Isolation**: Disjoint recording-level subsets (`data/splits/`) prevent data leakage between source training (`source_train.csv`), source validation (`source_val.csv`), target adaptation (`target_adaptation.csv`, 95 unlabelled recordings), target validation (`target_val.csv`, 38 recordings), and held-out target testing (`target_test.csv`, 57 recordings).
+> * **Explicit Calibration Statuses**: Thresholds were calibrated on `target_val.csv` using Hungarian matching. Classes without validation support (`Bp.20Hz`, `Bp.20Plus`) were marked `uncalibrated_no_positive_events`, while `Bm.D` was marked `uncalibrated_no_validation_detection`. Their fallback 0.50 thresholds yielded 0 predictions under model output floors, properly penalizing all reference test events as false negatives.
+> * **Paired Bootstrap Verification**: A paired recording-level bootstrap over 2,000 resamples confirms a positive difference in Macro-F1 ($\Delta = +0.0122$, empirical 95% CI: $[+0.0075, +0.0174]$) and Micro-F1 ($\Delta = +0.0841$), driven by Antarctic Blue Whale `Bm.Ant-A` ($TP = 96$ vs. $0$).
+> * **False Alarm Tradeoff & Generalization Scope**: DANN's increased sensitivity comes at a significant false-alarm cost (+65.46 false positives/hour; 95% CI: $[+47.72, +85.17]$). The evaluation tests within-site temporal generalization under domain shift on held-out Greenwich 2015 recordings; generalization to independent geographic sites remains unverified.
 
 ---
 

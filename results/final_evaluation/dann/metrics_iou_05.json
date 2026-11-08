@@ -1,0 +1,94 @@
+{
+    "class_metrics": {
+        "Bm.Ant-A": {
+            "tp": 8,
+            "fp": 1478,
+            "fn": 238,
+            "precision": 0.005383580080753701,
+            "recall": 0.032520325203252036,
+            "f1": 0.009237875288683603,
+            "gt_count": 246,
+            "pred_count": 1486
+        },
+        "Bm.Ant-B": {
+            "tp": 0,
+            "fp": 57,
+            "fn": 44,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "gt_count": 44,
+            "pred_count": 57
+        },
+        "Bm.Ant-Z": {
+            "tp": 0,
+            "fp": 57,
+            "fn": 9,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "gt_count": 9,
+            "pred_count": 57
+        },
+        "Bm.D": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 14,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "gt_count": 14,
+            "pred_count": 0
+        },
+        "Bp.20Hz": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "gt_count": 1,
+            "pred_count": 0
+        },
+        "Bp.20Plus": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "gt_count": 1,
+            "pred_count": 0
+        },
+        "Bp.Downsweep": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 13,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "gt_count": 13,
+            "pred_count": 0
+        },
+        "Unidentified": {
+            "tp": 1,
+            "fp": 56,
+            "fn": 58,
+            "precision": 0.017543859649122806,
+            "recall": 0.01694915254237288,
+            "f1": 0.017241379310344827,
+            "gt_count": 59,
+            "pred_count": 57
+        }
+    },
+    "macro_precision": 0.0028659299662345634,
+    "macro_recall": 0.006183684718203115,
+    "macro_f1": 0.003309906824878554,
+    "micro_f1": 0.008806262230919766,
+    "total_tp": 9,
+    "total_fp": 1648,
+    "total_fn": 378,
+    "total_gt": 387,
+    "total_pred": 1657,
+    "false_positives_per_hour": 172.84855997189297
+}

@@ -1,0 +1,45 @@
+{
+  "experiment": {
+    "name": "crnn_baseline",
+    "seed": 42
+  },
+  "data": {
+    "sample_rate": 250,
+    "clip_duration": 30,
+    "n_fft": 256,
+    "hop_length": 64,
+    "num_classes": 8,
+    "splits_dir": "data/splits",
+    "source_train_manifest": "data/splits/source_train.csv",
+    "source_val_manifest": "data/splits/source_val.csv",
+    "target_adapt_manifest": "data/splits/target_adaptation.csv",
+    "target_val_manifest": "data/splits/target_val.csv",
+    "target_test_manifest": "data/splits/target_test.csv"
+  },
+  "model": {
+    "architecture": "crnn",
+    "hidden_size": 128,
+    "gru_layers": 2,
+    "dropout": 0.3
+  },
+  "training": {
+    "epochs": 50,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "patience": 8,
+    "loss": {
+      "type": "focal",
+      "alpha": 0.25,
+      "gamma": 2.0
+    },
+    "domain_adaptation": {
+      "enabled": false
+    }
+  },
+  "evaluation": {
+    "metric": "macro_f1",
+    "event_iou": 0.1
+  }
+}
+

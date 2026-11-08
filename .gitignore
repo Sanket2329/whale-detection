@@ -1,5 +1,6 @@
-# Ignore data files (extremely large)
-data/
+# Ignore raw data files (extremely large audio files and annotations)
+data/casey2014/
+data/Greenwich64S2015/
 
 # Ignore local environment file (contains local paths)
 .env
