@@ -221,7 +221,7 @@ Under standard 0.5 decision thresholds, event recall collapses because raw frame
 ## 6. Reproducibility and Experimental Artefacts
 
 To support full scientific reproducibility, all code, configurations, data manifests, model checkpoints, and evaluation artifacts are preserved in the repository:
-- **Git Commit Provenance**: Commit SHA `68fcec30ed8746f43582d6ccfc44f001ac317c43` (clean working tree).
+- **Git Commit Provenance**: Commit SHA `cb4a0269e4238a8af97468f8f427f8e87699622b` (preceded by baseline commit `68fcec30ed8746f43582d6ccfc44f001ac317c43`).
 - **Environment & Runtime**: Python 3.11.0, PyTorch 2.13.0, Torchaudio 2.13.0, SoundFile 0.13.1, NumPy 2.2.6, SciPy 1.15.2, Pandas 2.3.2. Hardware execution performed on Apple Silicon (arm64, Apple M-series).
 - **Random Seeding and Determinism**:
   - Random seeds were fixed across Python (`random.seed(42)`), NumPy (`np.random.seed(42)`), and PyTorch (`torch.manual_seed(42)`).
