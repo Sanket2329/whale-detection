@@ -46,23 +46,42 @@ graph TD
 ```
 whale-detection/
 ├── .vscode/               # VS Code execution & debug configurations
-├── data/                  # Hydrophone recordings & Raven annotation files
-│   ├── casey2014/         # Train Site: Casey (2014) recordings
-│   └── Greenwich64S2015/  # Test Site: Greenwich (2015) recordings
-├── models/                # Saved model checkpoint files (*.pth) and thresholds JSON
-├── reports/               # Output predictions & assessment documents
-│   ├── predictions/       # Extracted Raven-compatible selection files
+├── configs/               # Structured experiment configurations (YAML & JSON)
+│   ├── baseline.yaml      # Baseline CRNN hyperparameters & manifest paths
+│   └── dann.yaml          # CRNN-DANN domain adaptation hyperparameters
+├── data/                  # Hydrophone recordings, splits & Raven annotations
+│   ├── splits/            # Disjoint recording manifests (source train/val, target adapt/val/test)
+│   ├── casey2014/         # Source Site: Casey (2014) recordings & annotations
+│   └── Greenwich64S2015/  # Target Site: Greenwich 64S (2015) recordings & annotations
+├── checkpoints/           # Saved PyTorch checkpoints with config, seed & commit metadata
+│   ├── crnn_baseline_best.pt
+│   └── crnn_dann_best.pt
+├── results/               # Comprehensive evaluation metrics & predictions
+│   └── final_evaluation/ # Audited JSON metrics, prediction CSVs, and paired comparison outputs
+│       ├── crnn/          # Predictions, metrics (IoU 0.1 & 0.5), and bootstrap CIs
+│       ├── dann/          # Predictions, metrics (IoU 0.1 & 0.5), and bootstrap CIs
+│       └── comparison/    # model_comparison.csv & paired_bootstrap_comparison.json
+├── reports/               # Assessment documents and technical reports
 │   └── technical_report.md# Formal engineering assessment report
-├── src/                   # Python package modules
+├── scripts/               # Production pipeline scripts
+│   ├── train.py           # Checkpointed GPU/MPS training with validation thresholding
+│   ├── evaluate.py        # Continuous recording inference & frozen threshold evaluation
+│   └── compare_models.py  # Paired recording-level bootstrap comparison (2,000 draws)
+├── src/                   # Core Python package modules
 │   ├── __init__.py
-│   ├── dataset.py         # Signal preprocessing, filtering, & balanced loader
-│   ├── model.py           # Deep learning CRNN network & Domain Classifier (DANN/GRL)
-│   ├── train.py           # Accelerated GPU training controller (DANN, dynamic thresholds)
+│   ├── preprocessing/     # 10 Hz Butterworth highpass & soxr rational resampling to 250 Hz
+│   ├── models/            # WhaleCRNN & WhaleCRNNDANN (GRL + DomainClassifier)
+│   ├── training/          # Checkpoint persistence & FocalLoss
+│   ├── evaluation/        # Hungarian maximum-cardinality bipartite matching & bootstrap CIs
+│   ├── dataset.py         # Raven table parser & balanced windowed clip extraction
 │   ├── infer.py           # Overlapping sliding window boundary extractor
-│   ├── evaluate.py        # Greedy IoU interval matcher
-│   ├── losses.py          # Custom loss functions like Focal Loss
 │   ├── export_onnx.py     # Script to export PyTorch model to ONNX
 │   └── benchmark_onnx.py  # Latency comparison script for ONNX Runtime vs PyTorch
+├── tests/                 # Comprehensive unit & pipeline integrity test suite (18 tests)
+│   ├── test_annotation_resolution.py
+│   ├── test_components.py
+│   ├── test_evaluation.py
+│   └── test_integrity.py
 ├── app.py                 # Interactive Streamlit Web Application
 ├── README.md              # Project documentation
 ├── approach.md            # Detailed methodology & design document
@@ -106,28 +125,29 @@ To train, run inference, and generate the final F1 evaluation table end-to-end, 
 ./run_pipeline.sh
 ```
 
-### 3. Manual Testing (Step-by-Step)
+### 3. Pipeline Execution & Evaluation Commands
 You can run individual pipeline steps using Python's `-m` module switch:
 
-*   **Step A: Train Model**
+*   **Step A: Model Training**
     ```bash
-    python3 -m src.train --train_dir data/casey2014 --train_name casey2014 --val_dir data/Greenwich64S2015 --val_name Greenwich64S2015 --epochs 5 --subsample_train 0.05 --subsample_val 0.1 --save_path models/best_model.pth --loss_type focal --mixup_alpha 0.2 --spec_augment --dann
+    python3 -m scripts.train --config configs/baseline.yaml
+    python3 -m scripts.train --config configs/dann.yaml
     ```
 
-*   **Step B: Run Inference (Detection) on a WAV file**
+*   **Step B: Evaluate Predictions on Held-Out Test Set**
     ```bash
-    python3 -m src.infer --model_path models/best_model.pth --wav_path data/Greenwich64S2015/wav/20150102-140944.wav --output_dir reports/predictions/manual_test
+    python3 -m scripts.evaluate --checkpoint checkpoints/crnn_baseline_best.pt --test_manifest data/splits/target_test.csv --annotation_dir data/Greenwich64S2015 --output_dir results/final_evaluation/crnn
+    python3 -m scripts.evaluate --checkpoint checkpoints/crnn_dann_best.pt --test_manifest data/splits/target_test.csv --annotation_dir data/Greenwich64S2015 --output_dir results/final_evaluation/dann
     ```
 
-*   **Step C: Evaluate Metrics against Ground-Truth**
+*   **Step C: Execute Paired Recording-Level Bootstrap Comparison (2,000 Draws)**
     ```bash
-    python3 -m src.evaluate --gt_dir data/Greenwich64S2015 --gt_name Greenwich64S2015 --pred_dir reports/predictions/manual_test --iou_thresh 0.1
+    python3 -m scripts.compare_models --crnn_dir results/final_evaluation/crnn --dann_dir results/final_evaluation/dann --test_manifest data/splits/target_test.csv --annotation_dir data/Greenwich64S2015 --output_dir results/final_evaluation/comparison --bootstrap_iterations 2000 --seed 42
     ```
 
-*   **Step D: Export & Benchmark ONNX (Evidence of Speedup)**
+*   **Step D: Run Full Pipeline Integrity Test Suite**
     ```bash
-    python3 -m src.export_onnx
-    python3 -m src.benchmark_onnx
+    python3 -m unittest discover tests/ -v
     ```
 
 ---
