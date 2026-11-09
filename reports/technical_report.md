@@ -86,7 +86,7 @@ The experimental comparison assesses the impact of adversarial domain adaptation
 | **Trainable Parameters** | 1,578,088 | 1,841,257 |
 | **Classification Head** | Linear(256, 8) + Multi-label Sigmoid (2,056 params) | Linear(256, 8) + Multi-label Sigmoid (2,056 params) |
 | **Domain Classifier Branch** | None | Linear(1024, 256) $\to$ BatchNorm1d(256) $\to$ ReLU $\to$ Dropout(0.3) $\to$ Linear(256, 1) (263,169 params) |
-| **Gradient Reversal Layer (GRL)**| No | Yes ($\lambda$ scheduled $0.0 \to 1.0$) |
+| **Gradient Reversal Layer (GRL)**| No | Yes (Ganin schedule; epoch-wise $\lambda$: 0.000, 0.762, 0.964, 0.995, 0.999) |
 | **Source Training Data** | Casey 2014 (`source_train.csv`, 156 recs) | Casey 2014 (`source_train.csv`, 156 recs) |
 | **Target Adaptation Data** | None | Greenwich 2015 (`target_adaptation.csv`, 95 recs unlabelled) |
 | **Target Validation Data** | Greenwich 2015 (`target_val.csv`, 38 recs) | Greenwich 2015 (`target_val.csv`, 38 recs) |
@@ -139,18 +139,18 @@ The reported class-specific thresholds are frame-level thresholds associated wit
 
 | Class Name | Target Val GT Events | CRNN Baseline Threshold | CRNN Baseline Status | CRNN-DANN Threshold | CRNN-DANN Status |
 |:---|:---:|:---:|:---|:---:|:---|
-| **`Bm.Ant-A`** | 191 | 0.05 | Stored; provenance unresolved | 0.15 | Stored; frame-level selection |
+| **`Bm.Ant-A`** | 191 | 0.05 | Stored; provenance unresolved | 0.15 | Stored; consistent with sweep grid |
 | **`Bm.Ant-B`** | 28 | 0.05 | Stored; provenance unresolved | 0.05 | Stored; provenance unresolved |
-| **`Bm.Ant-Z`** | 6 | 0.15 | Stored; frame-level selection | 0.05 | Stored; provenance unresolved |
+| **`Bm.Ant-Z`** | 6 | 0.15 | Stored; consistent with sweep grid | 0.05 | Stored; provenance unresolved |
 | **`Bm.D`** | 4 | 0.50 | Default fallback | 0.50 | Default fallback |
 | **`Bp.20Hz`** | 0 | 0.50 | Default fallback; no validation support | 0.50 | Default fallback; no validation support |
 | **`Bp.20Plus`** | 0 | 0.50 | Default fallback; no validation support | 0.50 | Default fallback; no validation support |
 | **`Bp.Downsweep`** | 14 | 0.05 | Stored; provenance unresolved | 0.05 | Stored; provenance unresolved |
 | **`Unidentified`** | 62 | 0.05 | Stored; provenance unresolved | 0.05 | Stored; provenance unresolved |
 
-*Threshold provenance limitation*: The committed threshold-sweep grid starts at 0.10, but the stored checkpoints contain thresholds of 0.05. The current committed code therefore cannot reproduce the complete selection history for those values. The checkpoint-stored thresholds are used as the authoritative record of the values applied in the reported test evaluation. The earlier code revision responsible for the 0.05 values has not been recovered.
+*Threshold provenance limitation*: The 0.15 stored thresholds are consistent with the committed sweep grid, though their exact historical selection process is not independently reconstructed. The 0.05 values fall outside the committed sweep grid (which begins at 0.10) and have unresolved provenance. The checkpoint-stored thresholds are used as the authoritative record of the values applied in the reported test evaluation. The earlier code revision responsible for the 0.05 values has not been recovered.
 
-For classes retaining the default fallback threshold of 0.50, the reported test probabilities remain below 0.20, resulting in zero extracted events and recording all reference test events as false negatives. For several classes using a threshold of 0.05, low background probability floors produce extended activations, including full-recording events (e.g. 57 full-length 600s intervals for `Bm.Ant-B` and `Unidentified`). These outputs are evaluated by the event-level bipartite matching procedure described in Section 3.3.
+For classes retaining the default fallback threshold of 0.50, the reported test probabilities remain below 0.20, resulting in zero extracted events and recording all reference test events as false negatives. For several classes using a threshold of 0.05, low background probability floors produce extended activations across test recordings. Specifically, direct inspection of the evaluation predictions (`results/final_evaluation/crnn/predictions.csv` and `results/final_evaluation/dann/predictions.csv`) confirms that exactly six model–class combinations produce one full-length event of approximately 600.1 seconds per test recording: CRNN Baseline for `Bm.Ant-A`, `Bm.Ant-B`, and `Unidentified` (57 events each of 600.064 s), and CRNN-DANN for `Bm.Ant-B`, `Bm.Ant-Z`, and `Unidentified` (57 events each of 600.064 s). These outputs are evaluated by the event-level bipartite matching procedure described in Section 3.3.
 
 #### 3.4.2 Audited Test Set Results (IoU >= 0.1 on Held-out Greenwich 2015, 387 Reference Events)
 The held-out evaluation was executed across all 57 recordings in `target_test.csv`, representing exactly 34,323.69 seconds (9.534 hours) of continuous hydrophone audio. False-positive rates per hour are normalized by this exact evaluated audio duration ($9.534$ h).
@@ -238,7 +238,7 @@ https://github.com/Sanket2329/whale-detection
 
 Git and checkpoint provenance:
 - Implementation commit: `cb4a0269e4238a8af97468f8f427f8e87699622b`, which introduced the reported experiment code.
-- Repository head at the time of writing: `853c2445b23b185faec64dcdd1d6a99252a16d86`.
+- Repository head at the time of writing: `c7c397e06a28b3f61a62d668063043e3ddc385da`.
 - Checkpoint-recorded parent commit: `68fcec30ed8746f43582d6ccfc44f001ac317c43`. The checkpoints record this parent commit because training was performed from the working tree before the experiment code was committed.
 - Checkpoint provenance limitation: The checkpoint metadata therefore does not identify the later commit that introduced the public implementation. The implementation commit and current repository head are reported separately rather than presenting the checkpoint's parent commit as the final experiment-code revision.
 
