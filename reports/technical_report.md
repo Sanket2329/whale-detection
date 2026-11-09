@@ -54,22 +54,28 @@ Linear + Sigmoid
 Output: (B, 118, 8)
 ```
 
-### 2.3 Handling Class Imbalance
-Whale calls occupy less than 10% of the recordings. To build a robust model without generating excessive false positives:
-1. **Balanced Clip Extraction**: For positive classes, 30-second clips are extracted centered around each ground-truth annotation.
-2. **Negative Mining**: For negative classes, unannotated segments of WAV files are identified using a vectorized gap finder and sampled at a 1:1 ratio with positive clips. This balances active and silent clips.
+### 2.3 Training Clip Construction and Class Imbalance
+Training inputs are constructed as 30-second sliding windows with a 15-second stride. Source-domain clips are associated with frame-level multi-label targets derived from the available annotations. Target adaptation clips are loaded without annotation labels and are used only by the domain-adaptation branch.
+
+The reported training configuration does not implement explicit class-balanced clip mining, annotation-centred positive-window extraction, or a positive-to-negative sampling ratio. No data augmentation, Mixup, or SpecAugment is applied in the reported runs.
+
+The available repository artefacts do not establish whether additional clip-subsampling options were used when the original training runs were launched. Consequently, the exact subset of generated windows consumed by those runs cannot currently be reconstructed. This limitation is retained as a reproducibility caveat rather than assuming that every generated window was used.
 
 ---
 
 ## 3. Experiments & Evaluation
 
-### 3.1 Domain Adaptation & Partitioning Strategy
-*   **Source Domain (Training / Validation)**: `casey2014` (Casey site, 2014 recordings). Labelled recordings partitioned strictly at the recording level into `source_train.csv` (156 recordings) and `source_val.csv` (38 recordings).
-*   **Target Domain (Adaptation, Validation, Held-out Test)**: `Greenwich64S2015` (Greenwich 64S / Maud Rise site, 2015 recordings). Rather than an unpartitioned dataset, Greenwich recordings were split into disjoint recording-level subsets:
-    - 95 unlabelled recordings dedicated exclusively to unsupervised domain adaptation (`target_adaptation.csv`, zero label fields exposed).
-    - 38 labelled recordings used strictly for validation checkpointing and threshold calibration (`target_val.csv`).
-    - 57 labelled recordings held out strictly for final evaluation (`target_test.csv`).
-*   **Optimization**: AdamW optimizer with a learning rate of 1e-3, Cosine Annealing scheduler, and Cosine decay over 5 epochs.
+### 3.1 Domain Adaptation and Recording-Level Partitioning
+The experiment uses Casey 2014 as the source domain and Greenwich 64°S 2015 as the target domain. Recordings are partitioned into five disjoint subsets:
+- `source_train.csv`: 156 labelled Casey recordings used for source-domain training.
+- `source_val.csv`: 38 Casey recordings retained as a separate manifest but not used by the reported training runs.
+- `target_adaptation.csv`: 95 unlabelled Greenwich recordings available to the DANN model for domain adaptation.
+- `target_val.csv`: 38 labelled Greenwich recordings used for checkpoint selection and frame-level threshold selection.
+- `target_test.csv`: 57 labelled Greenwich recordings reserved for the final held-out evaluation.
+
+The baseline is source-only with respect to model training. It does not train on target-domain recordings, although its checkpoint selection and threshold selection use labelled target-validation data. The DANN model additionally uses the 95 unlabelled target-adaptation recordings during training.
+
+The recording-level separation prevents recordings from the adaptation, validation, and test partitions from overlapping. The test partition remains reserved for final evaluation.
 
 ### 3.2 Model Configuration and Baseline Comparison
 The experimental comparison assesses the impact of adversarial domain adaptation on cross-site generalization:
@@ -87,9 +93,15 @@ The experimental comparison assesses the impact of adversarial domain adaptation
 | **Held-Out Test Data** | Greenwich 2015 (`target_test.csv`, 57 recs) | Greenwich 2015 (`target_test.csv`, 57 recs) |
 | **Loss Function** | Multi-Label Focal Loss ($\alpha=0.25, \gamma=2.0$) | Focal Loss + Domain BCE Loss |
 | **Batch Size & Optimizer** | 64, AdamW ($\text{lr}=10^{-3}$, weight decay $10^{-4}$) | 64, AdamW ($\text{lr}=10^{-3}$, weight decay $10^{-4}$) |
-| **Training Budget & Checkpointing** | 5 epochs, best checkpoint saved at epoch 2 (val loss = 0.0247) | 5 epochs, best checkpoint saved at epoch 2 (val loss = 0.0248) |
+| **Training Budget & Checkpointing** | 5 epochs, best checkpoint saved at epoch 2 (validation frame-level macro-F1 = 0.0247) | 5 epochs, best checkpoint saved at epoch 2 (validation frame-level macro-F1 = 0.0248) |
 
-*Evaluation Scope Distinction*: The comparison evaluates a source-only CRNN training regime against a source-plus-target domain-adaptation regime incorporating adversarial domain classification. Because target-domain exposure and the additional domain-classification objective differ between configurations, the observed performance difference cannot be attributed exclusively to the Gradient Reversal Layer. Furthermore, validation loss curves reached their minimum early (epoch 2) before plateauing; models reflect validation checkpoint selection rather than asymptotic empirical convergence.
+Training execution and checkpoint selection: The YAML configuration files specify a nominal training budget of 50 epochs. The reported experiments were launched with the command-line override `--epochs 5`, and the scheduler state stored in the checkpoints records $T_{\text{max}} = 5$. The training script does not implement early stopping. After each epoch, the models are evaluated on the labelled target-validation recordings. The checkpoint-selection metric is frame-level macro-F1, not validation loss. Both models selected their best checkpoint at epoch 2, with recorded best metrics of 0.0247 for the baseline and 0.0248 for CRNN-DANN.
+
+Gradient Reversal Layer schedule: The DANN model uses the schedule proposed by Ganin et al.:
+$$\lambda(p) = \frac{2}{1 + \exp(-10p)} - 1$$
+where $p = (e - 1) / E$, $e$ is the current one-indexed epoch, and $E = 5$ is the total number of epochs in the reported run. The coefficient is updated once per epoch. The resulting values are approximately 0.000, 0.762, 0.964, 0.995, and 0.999 over epochs 1 to 5, respectively.
+
+*Evaluation Scope Distinction*: The comparison evaluates a source-only CRNN training regime against a source-plus-target domain-adaptation regime incorporating adversarial domain classification. Because target-domain exposure and the additional domain-classification objective differ between configurations, the observed performance difference cannot be attributed exclusively to the Gradient Reversal Layer. Furthermore, validation performance peaked early (epoch 2) before plateauing; models reflect validation checkpoint selection rather than asymptotic empirical convergence.
 
 ### 3.3 Event Matching Protocol and Metric Definitions
 Evaluation is performed at the discrete sound-event level using one-to-one bipartite matching:
@@ -108,7 +120,11 @@ Evaluation is performed at the discrete sound-event level using one-to-one bipar
      4. *Rectangular matrix with $N_{\text{pred}} > N_{\text{gt}}$* (1 GT, 3 Preds, only 1 overlapping): Correctly assigns $TP = 1$, $FP = 2$, $FN = 0$.
      5. *Rectangular matrix with $N_{\text{gt}} > N_{\text{pred}}$* (3 GTs, 1 Pred, only 1 overlapping): Correctly assigns $TP = 1$, $FP = 0$, $FN = 2$.
      6. *Competitive matching where greedy IoU is suboptimal*: $GT_1$ matches $Pred_1$ ($\text{IoU}=0.8$) and $Pred_2$ ($\text{IoU}=0.1$); $GT_2$ matches only $Pred_1$ ($\text{IoU}=0.75$). Greedy assignment on maximum IoU selects $(GT_1, Pred_1)$, leaving $GT_2$ unmatched ($TP = 1$). Our Hungarian implementation selects $(GT_1, Pred_2)$ and $(GT_2, Pred_1)$ because $2 \times 10^4 + 0.85 > 10^4 + 0.8$, successfully yielding $TP = 2$, $FP = 0$, $FN = 0$.
-3. **Threshold Selection Timing & Justification**: The $\text{IoU} \ge 0.1$ threshold was pre-specified in the project codebase from the initial implementation (commit `eee7654`) prior to running final held-out test evaluations. It was selected to capture event overlap while accommodating the acoustic boundary variance inherent in low-frequency marine hydrophone recordings (where multipath propagation, reverberation, and dispersion create diffuse start/end transitions). Because bioacoustic annotation protocols vary in boundary precision across human annotators, $\text{IoU} \ge 0.1$ is employed as our primary pre-specified benchmark to avoid penalizing well-aligned detections that differ only slightly in temporal margin.
+3. **Threshold Selection Protocol and Provenance**:
+   - *Selection Procedure*: Class-specific decision thresholds are selected at the frame level using labelled target-validation frames from `target_val.csv`. The selection procedure optimizes frame-level F1, rather than event-level F1 obtained through Hungarian matching. The selected thresholds are stored with the model checkpoints and applied unchanged during held-out event evaluation.
+   - *Evaluation Routine vs. Calibration*: The repository also contains an event-level threshold-calibration routine based on Hungarian matching. Inspection of the committed training and evaluation workflow indicates that this routine is not called by the reported experiments. It must therefore not be described as the method used to generate the stored checkpoint thresholds.
+   - *Provenance Discrepancy & Threshold Bounds*: The committed frame-level threshold-sweep grid begins at 0.10, whereas several stored checkpoint thresholds equal 0.05. These values cannot be reproduced using the currently committed sweep configuration. The checkpoints preserve the thresholds used for the reported evaluation, but the earlier code revision that generated the 0.05 values has not been recovered. The stored values are therefore retained without claiming that the current repository can regenerate their complete selection history. Temporal IoU of at least 0.1 was pre-specified in the project codebase from the initial implementation (commit `eee7654`) prior to running final held-out test evaluations. It was selected to capture event overlap while accommodating the acoustic boundary variance inherent in low-frequency marine hydrophone recordings (where multipath propagation, reverberation, and dispersion create diffuse start/end transitions).
+
 4. **Descriptive Sensitivity Across IoU Thresholds**: To evaluate whether comparative conclusions depend heavily on the $\text{IoU} \ge 0.1$ threshold, matching was evaluated across candidate thresholds $\text{IoU} \in \{0.1, 0.3, 0.5\}$:
    - **At $\text{IoU} \ge 0.1$**: CRNN Baseline achieves Macro-F1 = 0.0081 (TP = 8, FP = 933, FN = 379); CRNN DANN achieves Macro-F1 = 0.0203 (TP = 99, FP = 1558, FN = 288).
    - **At $\text{IoU} \ge 0.3$**: CRNN Baseline achieves Macro-F1 = 0.0028 (TP = 3, FP = 938, FN = 384); CRNN DANN achieves Macro-F1 = 0.0055 (TP = 24, FP = 1633, FN = 363).
@@ -118,33 +134,23 @@ Evaluation is performed at the discrete sound-event level using one-to-one bipar
 
 ### 3.4 Quantitative Results & Empirical Evaluation
 
-#### 3.4.1 Controlled Evaluation Protocol and Frozen Thresholds
-To eliminate historical data leakage where Greenwich 2015 was reused across adaptation, validation, and testing, the dataset was formally partitioned into five disjoint recording-level subsets:
-- **`source_train.csv`** (156 recordings, Casey 2014)
-- **`source_val.csv`** (38 recordings, Casey 2014)
-- **`target_adaptation.csv`** (95 recordings, Greenwich 2015; unlabelled, strictly zero annotation fields)
-- **`target_val.csv`** (38 recordings, Greenwich 2015; used solely for validation checkpointing and threshold calibration)
-- **`target_test.csv`** (57 recordings, Greenwich 2015; 52 containing calls, 5 pure background; strictly held out)
+#### 3.4.1 Target-Validation Thresholds and Checkpoint-Stored Values
+The reported class-specific thresholds are frame-level thresholds associated with selection on the 38 labelled target-validation recordings (`target_val.csv`). They are stored in the corresponding model checkpoints and are applied unchanged during held-out test evaluation. The event-level Hungarian calibration routine present in the repository is not called by the reported training or evaluation workflow.
 
-Threshold calibration was performed on the 38 recordings of `target_val.csv`. The validation pipeline distinguishes three distinct calibration states:
-1. `uncalibrated_no_positive_events`: The class contains zero reference ground-truth events in the validation set.
-2. `uncalibrated_no_validation_detection`: Ground-truth events exist in the validation set, but no candidate threshold yields a positive event-level F1.
-3. `calibrated_event_f1`: A candidate threshold achieves positive event-level F1 under Hungarian matching.
-
-The exact support, frozen thresholds, and calibration statuses from the audited checkpoints are recorded below:
-
-| Class Name | Target Val GT Events | CRNN Baseline Frozen Threshold | CRNN Baseline Status | CRNN DANN Frozen Threshold | CRNN DANN Status |
+| Class Name | Target Val GT Events | CRNN Baseline Threshold | CRNN Baseline Status | CRNN-DANN Threshold | CRNN-DANN Status |
 |:---|:---:|:---:|:---|:---:|:---|
-| **`Bm.Ant-A`** | 191 | 0.05 | `calibrated_event_f1` | 0.15 | `calibrated_event_f1` |
-| **`Bm.Ant-B`** | 28 | 0.05 | `calibrated_event_f1` | 0.05 | `calibrated_event_f1` |
-| **`Bm.Ant-Z`** | 6 | 0.15 | `calibrated_event_f1` | 0.05 | `calibrated_event_f1` |
-| **`Bm.D`** | 4 | 0.50 | `uncalibrated_no_validation_detection` | 0.50 | `uncalibrated_no_validation_detection` |
-| **`Bp.20Hz`** | 0 | 0.50 | `uncalibrated_no_positive_events` | 0.50 | `uncalibrated_no_positive_events` |
-| **`Bp.20Plus`** | 0 | 0.50 | `uncalibrated_no_positive_events` | 0.50 | `uncalibrated_no_positive_events` |
-| **`Bp.Downsweep`** | 14 | 0.05 | `calibrated_event_f1` | 0.05 | `calibrated_event_f1` |
-| **`Unidentified`** | 62 | 0.05 | `calibrated_event_f1` | 0.05 | `calibrated_event_f1` |
+| **`Bm.Ant-A`** | 191 | 0.05 | Stored; provenance unresolved | 0.15 | Stored; frame-level selection |
+| **`Bm.Ant-B`** | 28 | 0.05 | Stored; provenance unresolved | 0.05 | Stored; provenance unresolved |
+| **`Bm.Ant-Z`** | 6 | 0.15 | Stored; frame-level selection | 0.05 | Stored; provenance unresolved |
+| **`Bm.D`** | 4 | 0.50 | Default fallback | 0.50 | Default fallback |
+| **`Bp.20Hz`** | 0 | 0.50 | Default fallback; no validation support | 0.50 | Default fallback; no validation support |
+| **`Bp.20Plus`** | 0 | 0.50 | Default fallback; no validation support | 0.50 | Default fallback; no validation support |
+| **`Bp.Downsweep`** | 14 | 0.05 | Stored; provenance unresolved | 0.05 | Stored; provenance unresolved |
+| **`Unidentified`** | 62 | 0.05 | Stored; provenance unresolved | 0.05 | Stored; provenance unresolved |
 
-*Note on inference and fallback behavior*: For classes with zero validation support (`Bp.20Hz`, `Bp.20Plus`) and classes without validation detection (`Bm.D`), the training checkpoint stored a non-operational fallback threshold of 0.50; because model probability outputs for these classes remain strictly below 0.20 across all 57 test recordings, 0 predictions were extracted, yielding zero true positives and recording all test reference events as false negatives. For classes where low candidate thresholds (0.05) were selected, continuous background probability floors in test recordings produced extended active segments (e.g. 57 full-length 600s intervals for `Bm.Ant-B` and `Unidentified`), which were matched against reference annotations by the bipartite evaluator.
+*Threshold provenance limitation*: The committed threshold-sweep grid starts at 0.10, but the stored checkpoints contain thresholds of 0.05. The current committed code therefore cannot reproduce the complete selection history for those values. The checkpoint-stored thresholds are used as the authoritative record of the values applied in the reported test evaluation. The earlier code revision responsible for the 0.05 values has not been recovered.
+
+For classes retaining the default fallback threshold of 0.50, the reported test probabilities remain below 0.20, resulting in zero extracted events and recording all reference test events as false negatives. For several classes using a threshold of 0.05, low background probability floors produce extended activations, including full-recording events (e.g. 57 full-length 600s intervals for `Bm.Ant-B` and `Unidentified`). These outputs are evaluated by the event-level bipartite matching procedure described in Section 3.3.
 
 #### 3.4.2 Audited Test Set Results (IoU >= 0.1 on Held-out Greenwich 2015, 387 Reference Events)
 The held-out evaluation was executed across all 57 recordings in `target_test.csv`, representing exactly 34,323.69 seconds (9.534 hours) of continuous hydrophone audio. False-positive rates per hour are normalized by this exact evaluated audio duration ($9.534$ h).
@@ -176,9 +182,10 @@ Differences in detection performance between the CRNN Baseline and CRNN DANN wer
 | **F1 (`Unidentified`)** | 0.0517 | 0.0517 | +0.0000 | 0.0000 | [+0.0000, +0.0000] | Yes |
 
 **Scientific Takeaways**:
-1. **DANN Sensitivity vs. False Alarm Tradeoff**: DANN produces a positive paired bootstrap difference in Macro-F1 ($\Delta = +0.0122$, $95\%$ CI: $[+0.0075, +0.0174]$) and Micro-F1 ($\Delta = +0.0841$) whose empirical 95% confidence intervals exclude zero. This gain is driven by detecting 96 true positive `Bm.Ant-A` calls (vs. 0 for the baseline). However, this sensitivity comes at a substantial false-alarm penalty: false positives per hour increase by $+65.46$ hr$^{-1}$ ($95\%$ CI: $[+47.72, +85.17]$), reaching 163.41 FP/hr.
+1. **DANN Sensitivity vs. False Alarm Tradeoff**: DANN produces a positive paired bootstrap difference in Macro-F1 ($\Delta = +0.0122$, $95\%$ CI: $[+0.0075, +0.0174]$) and Micro-F1 ($\Delta = +0.0841$) whose empirical 95% confidence intervals exclude zero. This gain is driven by detecting 96 true positive `Bm.Ant-A` calls (vs. 0 for the baseline). However, the paired bootstrap gives a positive difference of 65.46 false positives per hour (empirical 95% CI: +47.72 to +85.17), reaching 163.41 FP/hr.
 2. **Context on Cross-Site Generalization**: Held-out testing was conducted on unseen recordings from the Greenwich 2015 deployment, representing within-site temporal generalization under domain shift rather than multi-site geographic transfer. Real-world automated PAM deployment will require tighter spectral filtering and higher-precision classifiers before operational field monitoring.
-3. **Operational Interpretation of Low Absolute Macro-F1**: Although DANN achieves a measurable relative improvement over the baseline, its absolute macro-F1 remains low at 0.0203. The high false-positive rate indicates that the model has not achieved a practically reliable operating point. The results should therefore be interpreted as an empirical comparison of two model configurations under the evaluated domain-adaptation protocol, rather than evidence of deployment-ready whale-call detection.
+3. **Unidentified Class Results**: Both models produce identical aggregate Unidentified metrics (TP = 3, FP = 54, FN = 56; F1 = 0.0517). These results provide no evidence of a performance advantage for CRNN-DANN on this class. The high false-positive burden limits the practical interpretation of the detections.
+4. **Operational Interpretation of Low Absolute Macro-F1**: Although DANN achieves a measurable relative improvement over the baseline, its absolute macro-F1 remains low at 0.0203. The high false-positive rate indicates that the model has not achieved a practically reliable operating point. The results should therefore be interpreted as an empirical comparison of two model configurations under the evaluated domain-adaptation protocol, rather than evidence of deployment-ready whale-call detection.
 
 ---
 
@@ -188,15 +195,21 @@ Differences in detection performance between the CRNN Baseline and CRNN DANN wer
 While the partition protocol strictly eliminated data leakage between adaptation, validation, and testing within the available datasets, several critical experimental constraints remain:
 1. **Single Target Deployment**: All target-domain recordings originate from the Greenwich 2015 deployment. Generalisation to independent geographic sites, different hydrophone mooring depths, and future deployment seasons remains unverified.
 2. **Target Data Exposure**: The DANN model receives 95 unlabelled recordings from Greenwich 2015 during training for adversarial domain adaptation. It does not represent zero-shot cross-site transfer.
-3. **Target Validation Reliance**: Threshold calibration and validation checkpointing rely on a separate labelled subset (38 recordings) from the same target deployment.
+3. **Target Validation Reliance**: The same 38 labelled target-validation recordings (`target_val.csv`) are used for both checkpoint selection and frame-level threshold selection, so these decisions are not independent and may be subject to validation-set optimism.
 4. **Held-Out Integrity**: The final 57 test recordings remained strictly held out and untouched until final evaluation.
 5. **Class Imbalance and Sparse Event Support**: The held-out evaluation set contains only 387 reference events across eight classes, with extreme support imbalance: Antarctic Blue Whale calls (`Bm.Ant-A`) account for 246 events (63.6%), while Fin Whale pulse types (`Bp.20Hz` and `Bp.20Plus`) are represented by just a single ground-truth event each. Performance estimates and bootstrap intervals for rare classes are inherently unstable and must be interpreted with caution.
 
 ### 4.2 Adversarial Domain Adaptation and Ablation Limitations
-In logged training epochs, the domain classification loss remained near $\ln 2 \approx 0.694$ (chance level). Without an otherwise identical CRNN baseline trained strictly without the Gradient Reversal Layer under identical training schedules, random seeds, and hyperparameters, the observed performance difference cannot be attributed exclusively to the Gradient Reversal Layer. Potential confounding factors include stochastic optimization trajectories and differing sensitivity to class imbalance.
+The comparison evaluates a source-only training baseline against a source-plus-target training regime with an additional adversarial domain-classification objective. It does not isolate the effect of the Gradient Reversal Layer from target-data exposure or the additional loss. A controlled ablation would require matched experiments comparing source-only training, source-plus-target training without GRL, and full DANN training under equivalent seeds and optimisation settings.
+
+The repository does not contain the per-epoch logs from the reported five-epoch runs. Consequently, the domain-classification loss trajectory and the progression of the training metrics cannot currently be independently inspected from the public artefacts. Successful domain invariance has therefore not been established. The absence of these logs also prevents a detailed analysis of training stability and convergence. Each model was trained once, so variability across random seeds remains unmeasured.
 
 ### 4.3 Sensitivity to Detection Thresholds and Probability Floors
-Under standard 0.5 decision thresholds, event recall collapses because raw frame probability outputs remain predominantly low ($<0.20$). While event-level threshold calibration on validation data identified active operating points for prominent call types, low candidate thresholds (e.g. 0.05) are vulnerable to background probability floors, creating extended continuous activations. Future work should investigate temperature scaling, logit calibration, and adaptive dynamic thresholding conditioned on local ambient noise levels.
+The reported class-specific thresholds are frame-level thresholds selected using labelled target-validation frames and stored with the model checkpoints. They were not selected by the event-level Hungarian calibration routine present in the repository, which is not called by the reported workflow.
+
+Several stored thresholds are as low as 0.05. Such low thresholds are vulnerable to background probability floors and can produce continuous activations spanning entire recordings. In six of the sixteen model–class combinations, the evaluation output contains exactly one event of approximately 600.1 seconds per test recording. These outputs contribute substantially to the false-positive burden and can occasionally overlap sufficiently with long reference events to be counted as true positives under the lenient event-level IoU threshold.
+
+The committed threshold sweep begins at 0.10, while the checkpoints contain values of 0.05. This discrepancy prevents complete reproduction of the historical threshold-selection process from the current repository. Future work should recover the earlier implementation where possible and investigate probability calibration, more conservative threshold selection, maximum event-duration constraints, and validation procedures that account for event-level false-alarm costs.
 
 ---
 
@@ -219,9 +232,38 @@ Under standard 0.5 decision thresholds, event recall collapses because raw frame
 ---
 
 ## 6. Reproducibility and Experimental Artefacts
+The implementation, configuration files, recording-level split manifests, model checkpoints, and evaluation artefacts are publicly available in the project repository:
 
-To support full scientific reproducibility, all code, configurations, data manifests, model checkpoints, and evaluation artifacts are preserved in the repository:
-- **Git Commit Provenance**: Commit SHA `cb4a0269e4238a8af97468f8f427f8e87699622b` (preceded by baseline commit `68fcec30ed8746f43582d6ccfc44f001ac317c43`).
+https://github.com/Sanket2329/whale-detection
+
+Git and checkpoint provenance:
+- Implementation commit: `cb4a0269e4238a8af97468f8f427f8e87699622b`, which introduced the reported experiment code.
+- Repository head at the time of writing: `853c2445b23b185faec64dcdd1d6a99252a16d86`.
+- Checkpoint-recorded parent commit: `68fcec30ed8746f43582d6ccfc44f001ac317c43`. The checkpoints record this parent commit because training was performed from the working tree before the experiment code was committed.
+- Checkpoint provenance limitation: The checkpoint metadata therefore does not identify the later commit that introduced the public implementation. The implementation commit and current repository head are reported separately rather than presenting the checkpoint's parent commit as the final experiment-code revision.
+
+Training execution:
+The YAML configuration files specify a nominal training budget of 50 epochs. The reported experiments were run with a command-line override of five epochs. The scheduler state stored in the checkpoints records $T_{\text{max}} = 5$.
+
+The corresponding training commands are:
+```bash
+python3 -m scripts.train --config configs/baseline.yaml --epochs 5
+python3 -m scripts.train --config configs/dann.yaml --epochs 5
+```
+The best checkpoints were selected using validation frame-level macro-F1. Both runs selected epoch 2, with recorded best metrics of 0.0247 for the baseline and 0.0248 for CRNN-DANN.
+
+Threshold provenance:
+The thresholds stored in the checkpoints were applied unchanged during held-out evaluation. The reported selection method is frame-level F1 on target-validation frames. The repository contains a separate event-level Hungarian calibration routine, but the reported workflow does not call it.
+
+The committed frame-level threshold-sweep grid begins at 0.10, whereas some checkpoint-stored thresholds equal 0.05. The earlier code revision responsible for those values has not been recovered. The checkpoints preserve the values used for evaluation, but the complete historical threshold-generation process cannot currently be reproduced from the committed code.
+
+Training-data construction limitation:
+Training clips are described as 30-second sliding windows with a 15-second stride. The available repository artefacts do not establish whether additional clip-subsampling options were used in the original runs. The exact training clip selection therefore remains incompletely documented.
+
+Training-log limitation:
+Per-epoch logs from the reported five-epoch runs are not included in the repository. The checkpoint-selection metrics are preserved in the checkpoints, but a complete training-curve analysis cannot be reconstructed from the public artefacts.
+
+Artefact integrity:
 - **Environment & Runtime**: Python 3.11.0, PyTorch 2.13.0, Torchaudio 2.13.0, SoundFile 0.13.1, NumPy 2.2.6, SciPy 1.15.2, Pandas 2.3.2. Hardware execution performed on Apple Silicon (arm64, Apple M-series).
 - **Random Seeding and Determinism**:
   - Random seeds were fixed across Python (`random.seed(42)`), NumPy (`np.random.seed(42)`), and PyTorch (`torch.manual_seed(42)`).

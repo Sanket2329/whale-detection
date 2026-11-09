@@ -128,10 +128,10 @@ To train, run inference, and generate the final F1 evaluation table end-to-end, 
 ### 3. Pipeline Execution & Evaluation Commands
 You can run individual pipeline steps using Python's `-m` module switch:
 
-*   **Step A: Model Training**
+*   **Step A: Model Training (5-Epoch Override Matching Checkpoints)**
     ```bash
-    python3 -m scripts.train --config configs/baseline.yaml
-    python3 -m scripts.train --config configs/dann.yaml
+    python3 -m scripts.train --config configs/baseline.yaml --epochs 5
+    python3 -m scripts.train --config configs/dann.yaml --epochs 5
     ```
 
 *   **Step B: Evaluate Predictions on Held-Out Test Set**
@@ -158,24 +158,24 @@ Evaluation was conducted on **57 strictly held-out recordings** (387 reference g
 
 | Class Name | Target Val GT | Frozen Threshold (CRNN / DANN) | Calibration Status | Test GT | CRNN Baseline F1 | CRNN DANN F1 | Mean Paired Diff (DANN - CRNN) | Paired 95% Bootstrap CI |
 | :--- | :---: | :---: | :--- | :---: | :---: | :---: | :---: | :---: |
-| **`Bm.Ant-A`** | 191 | 0.05 / 0.15 | `calibrated_event_f1` | 246 | 0.0000 | **0.1109** | +0.1100 | [+0.0761, +0.1492] |
-| **`Bm.Ant-B`** | 28 | 0.05 / 0.05 | `calibrated_event_f1` | 44 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
-| **`Bm.Ant-Z`** | 6 | 0.15 / 0.05 | `calibrated_event_f1` | 9 | **0.0128** | 0.0000 | -0.0127 | [-0.0264, -0.0025] |
-| **`Bm.D`** | 4 | 0.50 / 0.50 | `uncalibrated_no_validation_detection` | 14 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
-| **`Bp.20Hz`** | 0 | 0.50 / 0.50 | `uncalibrated_no_positive_events` | 1 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
-| **`Bp.20Plus`** | 0 | 0.50 / 0.50 | `uncalibrated_no_positive_events` | 1 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
-| **`Bp.Downsweep`** | 14 | 0.05 / 0.05 | `calibrated_event_f1` | 13 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
-| **`Unidentified`** | 62 | 0.05 / 0.05 | `calibrated_event_f1` | 59 | 0.0517 | 0.0517 | +0.0000 | [+0.0000, +0.0000] |
+| **`Bm.Ant-A`** | 191 | 0.05 / 0.15 | Stored; provenance unresolved / frame-level | 246 | 0.0000 | **0.1109** | +0.1100 | [+0.0761, +0.1492] |
+| **`Bm.Ant-B`** | 28 | 0.05 / 0.05 | Stored; provenance unresolved | 44 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
+| **`Bm.Ant-Z`** | 6 | 0.15 / 0.05 | Stored; frame-level / provenance unresolved | 9 | **0.0128** | 0.0000 | -0.0127 | [-0.0264, -0.0025] |
+| **`Bm.D`** | 4 | 0.50 / 0.50 | Default fallback | 14 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
+| **`Bp.20Hz`** | 0 | 0.50 / 0.50 | Default fallback; no validation support | 1 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
+| **`Bp.20Plus`** | 0 | 0.50 / 0.50 | Default fallback; no validation support | 1 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
+| **`Bp.Downsweep`** | 14 | 0.05 / 0.05 | Stored; provenance unresolved | 13 | 0.0000 | 0.0000 | +0.0000 | [+0.0000, +0.0000] |
+| **`Unidentified`** | 62 | 0.05 / 0.05 | Stored; provenance unresolved | 59 | 0.0517 | 0.0517 | +0.0000 | [+0.0000, +0.0000] |
 | **Macro-F1 (IoU $\ge$ 0.1)** | — | — | — | **387** | **0.0081** | **0.0203** | **+0.0122** | **[+0.0075, +0.0174]** |
 | **Micro-F1 (IoU $\ge$ 0.1)** | — | — | — | **387** | **0.0120** | **0.0969** | **+0.0841** | **[+0.0537, +0.1193]** |
 | **False Positives / Hour** | — | — | — | — | **97.86** | **163.41** | **+65.46** | **[+47.72, +85.17]** |
 
 > [!NOTE]
 > **Key Scientific Takeaways & Protocol Audit**:
-> * **Recording-Level Split Isolation**: Disjoint recording-level subsets (`data/splits/`) prevent data leakage between source training (`source_train.csv`), source validation (`source_val.csv`), target adaptation (`target_adaptation.csv`, 95 unlabelled recordings), target validation (`target_val.csv`, 38 recordings), and held-out target testing (`target_test.csv`, 57 recordings).
-> * **Explicit Calibration Statuses**: Thresholds were calibrated on `target_val.csv` using Hungarian matching. Classes without validation support (`Bp.20Hz`, `Bp.20Plus`) were marked `uncalibrated_no_positive_events`, while `Bm.D` was marked `uncalibrated_no_validation_detection`. Their fallback 0.50 thresholds yielded 0 predictions under model output floors, properly penalizing all reference test events as false negatives.
-> * **Paired Bootstrap Verification**: A paired recording-level bootstrap over 2,000 resamples confirms a positive difference in Macro-F1 ($\Delta = +0.0122$, empirical 95% CI: $[+0.0075, +0.0174]$) and Micro-F1 ($\Delta = +0.0841$), driven by Antarctic Blue Whale `Bm.Ant-A` ($TP = 96$ vs. $0$).
-> * **False Alarm Tradeoff & Generalization Scope**: DANN's increased sensitivity comes at a significant false-alarm cost (+65.46 false positives/hour; 95% CI: $[+47.72, +85.17]$). The evaluation tests within-site temporal generalization under domain shift on held-out Greenwich 2015 recordings; generalization to independent geographic sites remains unverified.
+> * **Recording-Level Split Isolation**: Disjoint recording-level subsets (`data/splits/`) prevent data leakage between source training (`source_train.csv`), source validation (`source_val.csv`, retained but unused in reported runs), target adaptation (`target_adaptation.csv`, 95 unlabelled recordings), target validation (`target_val.csv`, 38 recordings), and held-out target testing (`target_test.csv`, 57 recordings).
+> * **Threshold Provenance & Checkpoint Values**: Class thresholds stored in checkpoints reflect frame-level selection on target validation data, not event-level Hungarian calibration. The committed sweep grid begins at 0.10, whereas checkpoints contain values of 0.05 whose historical generation revision has not been recovered; these are reported as stored checkpoint values. Default 0.50 fallbacks yielded zero test predictions due to sub-0.20 probability outputs.
+> * **Paired Bootstrap Verification**: A paired recording-level bootstrap over 2,000 resamples gives a positive difference in Macro-F1 of +0.0122 (empirical 95% CI: [+0.0075, +0.0174]) and Micro-F1 of +0.0841, driven by Antarctic Blue Whale `Bm.Ant-A` ($TP = 96$ vs. $0$).
+> * **False Alarm Tradeoff & Unidentified Class**: DANN sensitivity incurs a positive paired difference of +65.46 false positives per hour (empirical 95% CI: [+47.72, +85.17]). Both models produce identical aggregate Unidentified metrics (TP = 3, FP = 54, FN = 56, F1 = 0.0517), providing no evidence of a DANN advantage on this class. Generalization to independent geographic sites remains unverified.
 
 ---
 
