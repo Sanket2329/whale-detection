@@ -238,7 +238,7 @@ https://github.com/Sanket2329/whale-detection
 
 Git and checkpoint provenance:
 - Implementation commit: `cb4a0269e4238a8af97468f8f427f8e87699622b`, which introduced the reported experiment code.
-- Repository head at the time of writing: `c7c397e06a28b3f61a62d668063043e3ddc385da`.
+- Repository head at the time of writing: `036ce29008b3cde6b5eb64df3445b556b3e4c41f`.
 - Checkpoint-recorded parent commit: `68fcec30ed8746f43582d6ccfc44f001ac317c43`. The checkpoints record this parent commit because training was performed from the working tree before the experiment code was committed.
 - Checkpoint provenance limitation: The checkpoint metadata therefore does not identify the later commit that introduced the public implementation. The implementation commit and current repository head are reported separately rather than presenting the checkpoint's parent commit as the final experiment-code revision.
 
@@ -288,7 +288,10 @@ Artefact integrity:
   - `results/final_evaluation/dann/predictions.csv`: `8d375f40c55ce69262df068db99fc537abdceede3bb975315136db001e355c38`
   - `results/final_evaluation/comparison/paired_bootstrap_comparison.json`: `c55ea5add66e9006ab1185a53482fbc820966a335fceb75330f6c7ac57172659`
   - `results/final_evaluation/comparison/model_comparison.csv`: `1402d25fba0761481d0de1a68d6a28f610106d84941780c660b0e0bac1a866f3`
+  - `results/calibration/crnn_calibrated_thresholds.json`: `4074a12052d7f0118050783be11262cd5b3059f7eea6458f7448eedada681a15`
+  - `results/calibration/dann_calibrated_thresholds.json`: `cbab47c5959c2f14e1c7ba781382f541b6730770fcc5cc2cb5edeb935201cac5`
 - **Evaluation Pipeline Execution**:
+  - Event-level Hungarian threshold calibration: `python3 -m scripts.calibrate_thresholds --checkpoint checkpoints/crnn_dann_best.pt --val_manifest data/splits/target_val.csv --annotation_dir data/Greenwich64S2015 --output_path results/calibration/dann_calibrated_thresholds.json`
   - Baseline inference: `python3 -m scripts.evaluate --checkpoint checkpoints/crnn_baseline_best.pt --test_manifest data/splits/target_test.csv --annotation_dir data/Greenwich64S2015 --output_dir results/final_evaluation/crnn`
   - DANN inference: `python3 -m scripts.evaluate --checkpoint checkpoints/crnn_dann_best.pt --test_manifest data/splits/target_test.csv --annotation_dir data/Greenwich64S2015 --output_dir results/final_evaluation/dann`
   - Model comparison & paired bootstrap: `python3 -m scripts.compare_models --crnn_dir results/final_evaluation/crnn --dann_dir results/final_evaluation/dann --test_manifest data/splits/target_test.csv --annotation_dir data/Greenwich64S2015 --output_dir results/final_evaluation/comparison --bootstrap_iterations 2000 --seed 42`

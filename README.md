@@ -57,6 +57,9 @@ whale-detection/
 │   ├── crnn_baseline_best.pt
 │   └── crnn_dann_best.pt
 ├── results/               # Comprehensive evaluation metrics & predictions
+│   ├── calibration/       # Calibrated thresholds from validation Hungarian matching
+│   │   ├── crnn_calibrated_thresholds.json
+│   │   └── dann_calibrated_thresholds.json
 │   └── final_evaluation/ # Audited JSON metrics, prediction CSVs, and paired comparison outputs
 │       ├── crnn/          # Predictions, metrics (IoU 0.1 & 0.5), and bootstrap CIs
 │       ├── dann/          # Predictions, metrics (IoU 0.1 & 0.5), and bootstrap CIs
@@ -65,6 +68,7 @@ whale-detection/
 │   └── technical_report.md# Formal engineering assessment report
 ├── scripts/               # Production pipeline scripts
 │   ├── train.py           # Checkpointed GPU/MPS training with validation thresholding
+│   ├── calibrate_thresholds.py # Validation Hungarian threshold calibration with duration bounds
 │   ├── evaluate.py        # Continuous recording inference & frozen threshold evaluation
 │   └── compare_models.py  # Paired recording-level bootstrap comparison (2,000 draws)
 ├── src/                   # Core Python package modules
@@ -77,7 +81,7 @@ whale-detection/
 │   ├── infer.py           # Overlapping sliding window boundary extractor
 │   ├── export_onnx.py     # Script to export PyTorch model to ONNX
 │   └── benchmark_onnx.py  # Latency comparison script for ONNX Runtime vs PyTorch
-├── tests/                 # Comprehensive unit & pipeline integrity test suite (18 tests)
+├── tests/                 # Comprehensive unit & pipeline integrity test suite (19 tests)
 │   ├── test_annotation_resolution.py
 │   ├── test_components.py
 │   ├── test_evaluation.py
@@ -134,18 +138,24 @@ You can run individual pipeline steps using Python's `-m` module switch:
     python3 -m scripts.train --config configs/dann.yaml --epochs 5
     ```
 
-*   **Step B: Evaluate Predictions on Held-Out Test Set**
+*   **Step B: Event-Level Validation Threshold Calibration (Optional / Diagnostic)**
+    ```bash
+    python3 -m scripts.calibrate_thresholds --checkpoint checkpoints/crnn_baseline_best.pt --val_manifest data/splits/target_val.csv --annotation_dir data/Greenwich64S2015 --output_path results/calibration/crnn_calibrated_thresholds.json
+    python3 -m scripts.calibrate_thresholds --checkpoint checkpoints/crnn_dann_best.pt --val_manifest data/splits/target_val.csv --annotation_dir data/Greenwich64S2015 --output_path results/calibration/dann_calibrated_thresholds.json
+    ```
+
+*   **Step C: Evaluate Predictions on Held-Out Test Set**
     ```bash
     python3 -m scripts.evaluate --checkpoint checkpoints/crnn_baseline_best.pt --test_manifest data/splits/target_test.csv --annotation_dir data/Greenwich64S2015 --output_dir results/final_evaluation/crnn
     python3 -m scripts.evaluate --checkpoint checkpoints/crnn_dann_best.pt --test_manifest data/splits/target_test.csv --annotation_dir data/Greenwich64S2015 --output_dir results/final_evaluation/dann
     ```
 
-*   **Step C: Execute Paired Recording-Level Bootstrap Comparison (2,000 Draws)**
+*   **Step D: Execute Paired Recording-Level Bootstrap Comparison (2,000 Draws)**
     ```bash
     python3 -m scripts.compare_models --crnn_dir results/final_evaluation/crnn --dann_dir results/final_evaluation/dann --test_manifest data/splits/target_test.csv --annotation_dir data/Greenwich64S2015 --output_dir results/final_evaluation/comparison --bootstrap_iterations 2000 --seed 42
     ```
 
-*   **Step D: Run Full Pipeline Integrity Test Suite**
+*   **Step E: Run Full Pipeline Integrity Test Suite (19 Tests)**
     ```bash
     python3 -m unittest discover tests/ -v
     ```
