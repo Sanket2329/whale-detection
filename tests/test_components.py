@@ -57,6 +57,27 @@ class TestWhalePipeline(unittest.TestCase):
         self.assertIn("clsB", th)
         self.assertGreaterEqual(macro, 0.9)
 
+    def test_event_duration_bounds_and_filtering(self):
+        from src.evaluation.threshold import extract_events_from_probabilities
+        # 100 frames at 250 Hz, hop=64 -> frame_dur = 64/250 = 0.256s
+        # 100 frames = 25.6 seconds
+        probs = np.zeros(100)
+        # 1 short event: 1 frame (0.256s < 0.5s) -> dropped by min_duration
+        probs[5] = 0.9
+        # 1 valid event: frames 10-25 -> 15 frames = 3.84s (in [0.5, 35.0])
+        probs[10:25] = 0.9
+        # 1 overly long event: frames 30-95 -> 65 frames = 16.64s
+        probs[30:95] = 0.9
+        
+        # Test without max_duration
+        events_all = extract_events_from_probabilities(probs, threshold=0.5, min_duration=0.5)
+        self.assertEqual(len(events_all), 2)
+        
+        # Test with max_duration=10.0s (should keep only the 3.84s event)
+        events_filtered = extract_events_from_probabilities(probs, threshold=0.5, min_duration=0.5, max_duration=10.0)
+        self.assertEqual(len(events_filtered), 1)
+        self.assertAlmostEqual(events_filtered[0]["duration"], 15 * 0.256, places=2)
+
 if __name__ == "__main__":
     unittest.main()
 

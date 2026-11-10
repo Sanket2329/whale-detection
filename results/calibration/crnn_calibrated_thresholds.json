@@ -1,0 +1,97 @@
+{
+  "calibrated_thresholds": {
+    "Bm.Ant-A": null,
+    "Bm.Ant-B": null,
+    "Bm.Ant-Z": 0.15000000000000002,
+    "Bm.D": 0.05,
+    "Bp.20Hz": null,
+    "Bp.20Plus": null,
+    "Bp.Downsweep": null,
+    "Unidentified": null
+  },
+  "validation_event_f1": {
+    "Bm.Ant-A": 0.0,
+    "Bm.Ant-B": 0.0,
+    "Bm.Ant-Z": 0.016713091922005572,
+    "Bm.D": 0.0032626427406199023,
+    "Bp.20Hz": 0.0,
+    "Bp.20Plus": 0.0,
+    "Bp.Downsweep": 0.0,
+    "Unidentified": 0.0
+  },
+  "calibration_status": {
+    "Bm.Ant-A": "uncalibrated_no_validation_detection",
+    "Bm.Ant-B": "uncalibrated_no_validation_detection",
+    "Bm.Ant-Z": "calibrated_event_f1",
+    "Bm.D": "calibrated_event_f1",
+    "Bp.20Hz": "uncalibrated_no_positive_events",
+    "Bp.20Plus": "uncalibrated_no_positive_events",
+    "Bp.Downsweep": "uncalibrated_no_validation_detection",
+    "Unidentified": "uncalibrated_no_validation_detection"
+  },
+  "diagnostics": {
+    "Bm.Ant-A": {
+      "total_gt": 191,
+      "best_threshold": null,
+      "event_f1": 0.0,
+      "event_precision": 0.0,
+      "event_recall": 0.0,
+      "active_frame_pct": 0.0
+    },
+    "Bm.Ant-B": {
+      "total_gt": 28,
+      "best_threshold": null,
+      "event_f1": 0.0,
+      "event_precision": 0.0,
+      "event_recall": 0.0,
+      "active_frame_pct": 0.0
+    },
+    "Bm.Ant-Z": {
+      "total_gt": 6,
+      "best_threshold": 0.15000000000000002,
+      "event_f1": 0.016713091922005572,
+      "event_precision": 0.0084985835694051,
+      "event_recall": 0.5,
+      "smoothed_active_frame_pct": 10.24448073008701
+    },
+    "Bm.D": {
+      "total_gt": 4,
+      "best_threshold": 0.05,
+      "event_f1": 0.0032626427406199023,
+      "event_precision": 0.0016366612111292963,
+      "event_recall": 0.5,
+      "smoothed_active_frame_pct": 55.3302614803051
+    },
+    "Bp.20Hz": {
+      "total_gt": 0,
+      "best_threshold": null,
+      "f1": 0.0,
+      "active_frame_pct": 0.0
+    },
+    "Bp.20Plus": {
+      "total_gt": 0,
+      "best_threshold": null,
+      "f1": 0.0,
+      "active_frame_pct": 0.0
+    },
+    "Bp.Downsweep": {
+      "total_gt": 14,
+      "best_threshold": null,
+      "event_f1": 0.0,
+      "event_precision": 0.0,
+      "event_recall": 0.0,
+      "active_frame_pct": 0.0
+    },
+    "Unidentified": {
+      "total_gt": 62,
+      "best_threshold": null,
+      "event_f1": 0.0,
+      "event_precision": 0.0,
+      "event_recall": 0.0,
+      "active_frame_pct": 0.0
+    }
+  },
+  "iou_thresh": 0.1,
+  "min_duration": 0.5,
+  "max_duration": 35.0
+}

@@ -28,6 +28,8 @@ def parse_args():
     parser.add_argument("--annotation_dir", type=str, default="data/Greenwich64S2015", help="Directory of ground truth Raven tables")
     parser.add_argument("--output_dir", type=str, required=True, help="Directory to save evaluation results")
     parser.add_argument("--device", type=str, default=None, help="Device to run inference (mps, cuda, cpu)")
+    parser.add_argument("--min_duration", type=float, default=0.5, help="Minimum event duration in seconds")
+    parser.add_argument("--max_duration", type=float, default=None, help="Optional maximum event duration in seconds to reject continuous floor activations")
     parser.add_argument("--bootstrap_iterations", type=int, default=2000, help="Number of bootstrap iterations")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for bootstrap")
     return parser.parse_args()
@@ -209,7 +211,9 @@ def main():
                 probabilities=prob_col,
                 threshold=th,
                 target_sr=250,
-                hop_length=64
+                hop_length=64,
+                min_duration=args.min_duration,
+                max_duration=args.max_duration
             )
             for e in events:
                 e["class_name"] = c_name

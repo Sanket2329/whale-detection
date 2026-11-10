@@ -9,11 +9,13 @@ def extract_events_from_probabilities(
     target_sr: int = 250,
     hop_length: int = 64,
     min_duration: float = 0.5,
+    max_duration: Optional[float] = None,
     filter_kernel_size: int = 7
 ) -> List[Dict[str, float]]:
     """Applies 1D median filtering and extracts contiguous intervals where p >= threshold.
 
     Guarantees exact parity between validation threshold optimization and final evaluation.
+    Supports optional max_duration constraint to reject continuous background floor activations.
     """
     if len(probabilities) == 0:
         return []
@@ -30,6 +32,8 @@ def extract_events_from_probabilities(
     for s, e in zip(starts, ends):
         dur = (e - s) * frame_dur
         if dur >= min_duration:
+            if max_duration is not None and dur > max_duration:
+                continue
             conf = float(np.mean(smoothed[s:e]))
             events.append({
                 "begin_time": float(s * frame_dur),
@@ -45,18 +49,20 @@ def calibrate_event_level_thresholds(
     class_names: List[str],
     candidate_thresholds: np.ndarray = None,
     iou_thresh: float = 0.1,
+    min_duration: float = 0.5,
+    max_duration: Optional[float] = 35.0,
     target_sr: int = 250,
     hop_length: int = 64
 ) -> Tuple[Dict[str, Optional[float]], Dict[str, float], Dict[str, str], Dict[str, dict]]:
     """Performs Event-Level Threshold Calibration on validation recordings using Hungarian matching.
 
-    
     For each class:
     - Verifies presence of positive ground-truth events in the validation set.
     - If no positive events exist, explicitly flags calibration_status as 'uncalibrated_no_positive_events'.
-    - If positive events exist, sweeps candidate thresholds, extracts events, and calculates event-level F1.
-    - Selects the threshold maximizing validation event-level F1.
-    
+    - If positive events exist, sweeps candidate thresholds, extracts events (with min/max duration constraints),
+      and calculates event-level F1 using bipartite Hungarian matching.
+    - Selects the threshold maximizing validation event-level F1, breaking ties by precision.
+
     Returns:
         best_thresholds: {class_name: float or None}
         best_f1s: {class_name: float}
@@ -64,7 +70,10 @@ def calibrate_event_level_thresholds(
         diagnostics: {class_name: dict_of_metrics}
     """
     if candidate_thresholds is None:
-        candidate_thresholds = np.arange(0.10, 0.91, 0.05)
+        candidate_thresholds = np.concatenate([
+            np.array([0.02, 0.05]),
+            np.arange(0.10, 0.91, 0.05)
+        ])
         
     best_thresholds = {}
     best_f1s = {}
@@ -106,7 +115,9 @@ def calibrate_event_level_thresholds(
                     probabilities=prob_arr,
                     threshold=th,
                     target_sr=target_sr,
-                    hop_length=hop_length
+                    hop_length=hop_length,
+                    min_duration=min_duration,
+                    max_duration=max_duration
                 )
                 tp, fp, fn = match_events_bipartite(gt_events, pred_events, iou_threshold=iou_thresh)
                 c_tp += tp
@@ -170,7 +181,10 @@ def find_best_thresholds_per_class(
 ) -> Tuple[Dict[str, Optional[float]], Dict[str, float], float]:
     """Frame-level baseline threshold search for testing/diagnostic parity."""
     if threshold_range is None:
-        threshold_range = np.arange(0.10, 0.91, 0.05)
+        threshold_range = np.concatenate([
+            np.array([0.02, 0.05]),
+            np.arange(0.10, 0.91, 0.05)
+        ])
         
     best_thresholds = {}
     class_f1s = {}
